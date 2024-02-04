@@ -36,6 +36,8 @@ class _DetailedConversationAnsichtState
   }
 
   Future<dynamic> fetchConversation({secondTry = false}) async {
+    client.searchTeacher("aa");
+
     try {
       if (secondTry) {
         await client.login();
@@ -148,7 +150,7 @@ class _DetailedConversationAnsichtState
                   fetcher: null,
                 );
               }
-              // Successful content
+              // Successful contents
               return ListView.builder(
                   itemCount: snapshot.data["reply"].length + 1,
                   itemBuilder: (context, index) {
