@@ -42,7 +42,7 @@ class _DataStorageRootViewState extends State<DataStorageRootView> {
       setState(() {
         loading = false;
       });
-    } on LanisException catch (e) {
+    } on LanisException {
       setState(() {
         error = true;
         loading = false;

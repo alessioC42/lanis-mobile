@@ -38,7 +38,7 @@ class _DataStorageNodeViewState extends State<DataStorageNodeView> {
       setState(() {
         loading = false;
       });
-    } on LanisException catch (e) {
+    } on LanisException {
       setState(() {
         error = true;
         loading = false;

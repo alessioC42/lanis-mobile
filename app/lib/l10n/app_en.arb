@@ -35,7 +35,7 @@
   "dynamicColor": "Dynamic",
   "schoolColor": "School color",
   "schoolColorOriginExplanation": "Your school has an accent color in the SPH.",
-  "noAppleMessageSupport": "Notifications are currently not supported on your end device (IOS / IpadOS).",
+  "noAppleMessageSupport": "Notifications are currently not supported on your device (IOS / IpadOS).",
   "sadlyNoSupport": "Unfortunately no support",
   "systemPermissionForNotifications": "Authorization for notifications",
   "systemPermissionForNotificationsExplained": "You must change your permissions for notifications in the app's system settings!",

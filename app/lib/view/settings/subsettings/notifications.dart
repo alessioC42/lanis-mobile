@@ -21,16 +21,7 @@ class NotificationsSettingsScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
-        children: [
-          if (Platform.isIOS)
-            ListTile(
-              leading: const Icon(Icons.info),
-              title: Text(AppLocalizations.of(context)!.sadlyNoSupport),
-              subtitle:
-                  Text(AppLocalizations.of(context)!.noAppleMessageSupport),
-            ),
-          const NotificationElements(),
-        ],
+        children: const [NotificationElements()],
       ),
     );
   }
@@ -45,35 +36,40 @@ class NotificationElements extends StatefulWidget {
 
 class _NotificationElementsState extends State<NotificationElements> {
   bool _enableNotifications = true;
-  int _notificationInterval = 15;
-  bool _notificationsAreOngoing = false;
-  bool _notificationPermissionGranted = false;
+  int _androidNotificationInterval = 15;
+  bool _androidNotificationsOngoing = false;
+  bool _androidNotificationPermissionGranted = false;
+  TimeOfDay _iOSUpdateTime = const TimeOfDay(hour: 7, minute: 40);
 
-  Future<void> loadSettingsVariables() async {
+  Future<void> loadSettingsVars() async {
     _enableNotifications =
         (await globalStorage.read(key: StorageKey.settingsPushService)) ==
             "true";
-    _notificationInterval = int.parse(
+    _androidNotificationInterval = int.parse(
         await globalStorage.read(key: StorageKey.settingsPushServiceIntervall));
-    _notificationsAreOngoing = (await globalStorage.read(
+    _androidNotificationsOngoing = (await globalStorage.read(
             key: StorageKey.settingsPushServiceOngoing)) ==
         "true";
 
-    _notificationPermissionGranted = await Permission.notification.isGranted;
+    _androidNotificationPermissionGranted = await Permission.notification.isGranted;
+    final String timeString = await globalStorage.read(key: StorageKey.settingsPushServiceIOSTime);
+    final List<String> timeList = timeString.split(":");
+    _iOSUpdateTime = TimeOfDay(hour: int.parse(timeList[0]), minute: int.parse(timeList[1]));
   }
 
   @override
   void initState() {
     super.initState();
     // Use await to ensure that loadSettingsVariables completes before continuing
-    loadSettingsVariables().then((_) {
+    loadSettingsVars().then((_) {
       setState(() {
         // Set the state after loading the variables
         _enableNotifications = _enableNotifications;
-        _notificationInterval = _notificationInterval;
-        _notificationsAreOngoing = _notificationsAreOngoing;
+        _androidNotificationInterval = _androidNotificationInterval;
+        _androidNotificationsOngoing = _androidNotificationsOngoing;
+        _iOSUpdateTime = _iOSUpdateTime;
 
-        _notificationPermissionGranted = _notificationPermissionGranted;
+        _androidNotificationPermissionGranted = _androidNotificationPermissionGranted;
       });
     });
   }
@@ -82,13 +78,13 @@ class _NotificationElementsState extends State<NotificationElements> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ListTile(
+        if (Platform.isAndroid) ListTile(
           title: Text(
               AppLocalizations.of(context)!.systemPermissionForNotifications),
-          trailing: Text(_notificationPermissionGranted
+          trailing: Text(_androidNotificationPermissionGranted
               ? AppLocalizations.of(context)!.granted
               : AppLocalizations.of(context)!.denied),
-          subtitle: !_notificationPermissionGranted
+          subtitle: !_androidNotificationPermissionGranted
               ? Text(AppLocalizations.of(context)!
                   .systemPermissionForNotificationsExplained)
               : null,
@@ -96,7 +92,7 @@ class _NotificationElementsState extends State<NotificationElements> {
         SwitchListTile(
           title: Text(AppLocalizations.of(context)!.pushNotifications),
           value: _enableNotifications,
-          onChanged: _notificationPermissionGranted
+          onChanged: _androidNotificationPermissionGranted
               ? (bool? value) async {
                   setState(() {
                     _enableNotifications = value!;
@@ -109,43 +105,60 @@ class _NotificationElementsState extends State<NotificationElements> {
           subtitle:
               Text(AppLocalizations.of(context)!.activateToGetNotification),
         ),
-        SwitchListTile(
+        if (Platform.isAndroid) SwitchListTile(
           title: Text(AppLocalizations.of(context)!.persistentNotification),
-          value: _notificationsAreOngoing,
-          onChanged: _enableNotifications && _notificationPermissionGranted
+          value: _androidNotificationsOngoing,
+          onChanged: _enableNotifications && _androidNotificationPermissionGranted
               ? (bool? value) async {
                   setState(() {
-                    _notificationsAreOngoing = value!;
+                    _androidNotificationsOngoing = value!;
                   });
                   await globalStorage.write(
                       key: StorageKey.settingsPushServiceOngoing,
-                      value: _notificationsAreOngoing.toString());
+                      value: _androidNotificationsOngoing.toString());
                 }
               : null,
         ),
-        ListTile(
+        if (Platform.isAndroid) ListTile(
           title: Text(AppLocalizations.of(context)!.updateInterval),
-          trailing: Text('$_notificationInterval min',
+          trailing: Text('$_androidNotificationInterval min',
               style: const TextStyle(fontSize: 14)),
-          enabled: _enableNotifications && _notificationPermissionGranted,
+          enabled: _enableNotifications && _androidNotificationPermissionGranted,
         ),
-        Slider(
-          value: _notificationInterval.toDouble(),
+        if (Platform.isAndroid) Slider(
+          value: _androidNotificationInterval.toDouble(),
           min: 15,
           max: 180,
-          onChanged: _enableNotifications && _notificationPermissionGranted
+          onChanged: _enableNotifications && _androidNotificationPermissionGranted
               ? (double value) {
                   setState(() {
-                    _notificationInterval = value.toInt(); // Umwandlung zu int
+                    _androidNotificationInterval = value.toInt(); // Umwandlung zu int
                   });
                 }
               : null,
           onChangeEnd: (double value) async {
             await globalStorage.write(
                 key: StorageKey.settingsPushServiceIntervall,
-                value: _notificationInterval.toString());
+                value: _androidNotificationInterval.toString());
           },
         ),
+        if (Platform.isIOS) ListTile(
+          title: const Text("Time of day"),
+          subtitle: const Text("The time of day when the notifications are sent. Does only apply when the app is opened fairly often. "),
+          trailing: Text(_iOSUpdateTime.format(context), style: const TextStyle(fontSize: 20)),
+          onTap: () async {
+            final TimeOfDay? newTime = await showTimePicker(
+              context: context,
+              initialTime: _iOSUpdateTime,
+            );
+            if (newTime != null) {
+              setState(() {
+                _iOSUpdateTime = newTime;
+              });
+            }
+            globalStorage.write(key: StorageKey.settingsPushServiceIOSTime, value: "${_iOSUpdateTime.hour}:${_iOSUpdateTime.minute}");
+          },
+        )
       ],
     );
   }
