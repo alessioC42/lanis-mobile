@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:sph_plan/view/conversations/detailed_conversation.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
+import 'package:flutter_tagging_plus/flutter_tagging_plus.dart';
+import 'package:sph_plan/shared/types/conversations.dart';
 
 import '../../client/client.dart';
 import '../../client/fetcher.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../shared/widgets/error_view.dart';
+import 'chat.dart';
+import 'detailed_conversation.dart';
+
+class TriggerRebuild with ChangeNotifier {
+  void trigger() {
+    notifyListeners();
+  }
+}
 
 class ConversationsAnsicht extends StatefulWidget {
   const ConversationsAnsicht({super.key});
@@ -15,12 +25,12 @@ class ConversationsAnsicht extends StatefulWidget {
 
 class _ConversationsAnsichtState extends State<ConversationsAnsicht>
     with TickerProviderStateMixin {
+  static const double padding = 12.0;
+
   final InvisibleConversationsFetcher invisibleConversationsFetcher =
       client.fetchers.invisibleConversationsFetcher;
   final VisibleConversationsFetcher visibleConversationsFetcher =
       client.fetchers.visibleConversationsFetcher;
-
-  static const double padding = 12.0;
 
   final GlobalKey<RefreshIndicatorState> _refreshVisibleKey =
       GlobalKey<RefreshIndicatorState>();
@@ -31,6 +41,10 @@ class _ConversationsAnsichtState extends State<ConversationsAnsicht>
   dynamic invisibleConversations;
 
   late TabController _tabController;
+
+  final TextEditingController subjectController = TextEditingController();
+  final List<ReceiverEntry> receivers = [];
+  final TriggerRebuild rebuildSearch = TriggerRebuild();
 
   @override
   void initState() {
@@ -163,12 +177,20 @@ class _ConversationsAnsichtState extends State<ConversationsAnsicht>
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => DetailedConversationAnsicht(
-                                    uniqueID: conversations[index]
-                                        ["Uniquid"], // nice typo Lanis
-                                    title: conversations[index]["Betreff"],
-                                  )));
+                              builder: (context) => ConversationsChat(id: conversations[index]
+                              ["Uniquid"], // nice typo Lanis
+                                title: conversations[index]["Betreff"],))
+                      );
                     }
+                  },
+                  onLongPress: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => DetailedConversationAnsicht(
+                              uniqueID: conversations[index]["Uniquid"],
+                              title: conversations[index]["Betreff"],))
+                    );
                   },
                   customBorder: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -181,6 +203,93 @@ class _ConversationsAnsichtState extends State<ConversationsAnsicht>
           );
         },
       ),
+    );
+  }
+
+  void showCreationDialog(ChatType chatType) {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Neue Konversation erstellen"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(chatType.description),
+              ListenableBuilder(
+                listenable: rebuildSearch,
+                builder: (context, widget) {
+                  return FlutterTagging<ReceiverEntry>(
+                    initialItems: receivers,
+                    textFieldConfiguration: const TextFieldConfiguration(
+                      decoration: InputDecoration(
+                        hintText: "z. B. Namen oder Abkürzungen",
+                        labelText: "Empfänger hinzufügen",
+                      ),
+                    ),
+                    configureChip: (tag) {
+                      return ChipConfiguration(
+                          label: Text(tag.name)
+                      );
+                    },
+                    configureSuggestion: (tag) {
+                      return SuggestionConfiguration(
+                          title: Text(tag.name)
+                      );
+                    },
+                    findSuggestions: (query) async {
+                      query = query.trim();
+                      if (query.isEmpty) return <ReceiverEntry>[];
+
+                      final dynamic result = await client.conversations.searchTeacher(query);
+                      return result == false ? <ReceiverEntry>[] : result;
+                    },
+                  );
+                }
+              ),
+              TextField(
+                controller: subjectController,
+                decoration: const InputDecoration(
+                    hintText: 'Betreff'
+                ),
+              )
+            ],
+          ),
+          actions: [
+            IconButton(
+                onPressed: () {
+                  subjectController.clear();
+                  receivers.clear();
+                  rebuildSearch.trigger();
+                },
+                icon: const Icon(Icons.format_clear)
+            ),
+            ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text("Zurück")
+            ),
+            FilledButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ConversationsChat(
+                      title: subjectController.text,
+                      creationData: PartialChat(
+                          type: chatType,
+                          subject: subjectController.text,
+                          receivers: receivers.map((entry) => entry.id).toList()
+                      ),
+                    )),
+                  );
+                  subjectController.clear();
+                  receivers.clear();
+                },
+                child: const Text("Erstellen")
+            ),
+          ],
+        )
     );
   }
 
@@ -237,13 +346,47 @@ class _ConversationsAnsichtState extends State<ConversationsAnsicht>
               })
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _refreshVisibleKey.currentState?.show();
-          _refreshInvisibleKey.currentState?.show();
-        },
-        heroTag: "RefreshConversations",
-        child: const Icon(Icons.refresh),
+      floatingActionButtonLocation: ExpandableFab.location,
+      floatingActionButton: ExpandableFab(
+        distance: 70,
+        type: ExpandableFabType.up,
+          openButtonBuilder: RotateFloatingActionButtonBuilder(
+            child: const Icon(Icons.add)
+          ),
+          children: [
+            FloatingActionButton.extended(
+              heroTag: null,
+              icon: const Icon(Icons.speaker_notes_off),
+              label: const Text("Hinweis"),
+              onPressed: () {
+                showCreationDialog(ChatType.noAnswerAllowed);
+              },
+            ),
+            FloatingActionButton.extended(
+              heroTag: null,
+              icon: const Icon(Icons.mic),
+              label: const Text("Mitteilung"),
+              onPressed: () {
+                showCreationDialog(ChatType.privateAnswerOnly);
+              },
+            ),
+            FloatingActionButton.extended(
+              heroTag: null,
+              icon: const Icon(Icons.forum),
+              label: const Text("Gruppenchat"),
+              onPressed: () {
+                showCreationDialog(ChatType.groupOnly);
+              },
+            ),
+            FloatingActionButton.extended(
+              heroTag: null,
+              icon: const Icon(Icons.groups),
+              label: const Text("Offener Chat"),
+              onPressed: () {
+                showCreationDialog(ChatType.openChat);
+              },
+            ),
+          ]
       ),
     );
   }

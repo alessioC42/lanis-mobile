@@ -117,6 +117,7 @@ class _DetailedConversationAnsichtState
                     flex: 10,
                     child: FormattedText(
                       text: content,
+                      formatStyle: DefaultFormatStyle(context: context),
                     ))
               ],
             ),

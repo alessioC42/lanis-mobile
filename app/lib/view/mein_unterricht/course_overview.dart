@@ -323,6 +323,7 @@ class _CourseOverviewAnsichtState extends State<CourseOverviewAnsicht> {
                                     child: FormattedText(
                                       text: data["historie"][index]["markup"]
                                           ["content"],
+                                      formatStyle: DefaultFormatStyle(context: context),
                                     ),
                                   ),
                                 ],
@@ -448,6 +449,7 @@ class _CourseOverviewAnsichtState extends State<CourseOverviewAnsicht> {
                                           child: FormattedText(
                                             text: data["historie"][index]
                                                 ["markup"]["homework"],
+                                            formatStyle: DefaultFormatStyle(context: context),
                                           ),
                                         )
                                       ],
