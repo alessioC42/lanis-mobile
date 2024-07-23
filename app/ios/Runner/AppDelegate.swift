@@ -1,5 +1,7 @@
 import UIKit
 import Flutter
+import workmanager
+import flutter_local_notifications
 
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
@@ -9,8 +11,18 @@ import Flutter
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
     
-    // Set the minimum background fetch interval.
-    UIApplication.shared.setMinimumBackgroundFetchInterval(TimeInterval(60*15))
+    if #available(iOS 13.0, *) {
+      UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate
+    }
+    
+    FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { (registry) in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
+    
+    WorkmanagerPlugin.registerTask(withIdentifier: "notificationservice")
+    
+      WorkmanagerPlugin.registerPeriodicTask(withIdentifier: "io.github.alessioc42.notificationservice", frequency: NSNumber(value: 30 * 60))
+    UIApplication.shared.setMinimumBackgroundFetchInterval(TimeInterval(30 * 60))
     
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

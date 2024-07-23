@@ -19,33 +19,23 @@ List<PageViewModel> setupScreenPageViewModels(BuildContext context) => [
                 height: 175.0),
             title: AppLocalizations.of(context)!.setupNonStudentTitle,
             body: AppLocalizations.of(context)!.setupNonStudent),
-      if (client.doesSupportFeature(SPHAppEnum.vertretungsplan)) ...[
-        if (Platform.isIOS)
-          PageViewModel(
-              image: SvgPicture.asset(
-                  "assets/undraw/undraw_new_notifications_re_xpcv.svg",
-                  height: 175.0),
-              title: AppLocalizations.of(context)!.setupPushNotificationsTitle,
-              body:
-                  "Benachrichtigungen werden für dich leider nicht unterstützt, da Apple es nicht ermöglicht, dass Apps periodisch im Hintergrund laufen. Du kannst aber die App öffnen, um zu sehen, ob es neue Vertretungen gibt."),
-        if (Platform.isAndroid) ...[
-          PageViewModel(
-              image: SvgPicture.asset(
-                  "assets/undraw/undraw_new_notifications_re_xpcv.svg",
-                  height: 175.0),
-              title: AppLocalizations.of(context)!.setupPushNotificationsTitle,
-              body: AppLocalizations.of(context)!.setupPushNotifications),
-          PageViewModel(
-              image: SvgPicture.asset(
-                  "assets/undraw/undraw_active_options_re_8rj3.svg",
-                  height: 175.0),
-              title: AppLocalizations.of(context)!.setupPushNotificationsTitle,
-              bodyWidget: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [NotificationElements()],
-              )),
-        ]
+      if (client.doesSupportFeature(SPHAppEnum.vertretungsplan) && Platform.isAndroid) ...[
+        PageViewModel(
+            image: SvgPicture.asset(
+                "assets/undraw/undraw_new_notifications_re_xpcv.svg",
+                height: 175.0),
+            title: AppLocalizations.of(context)!.setupPushNotificationsTitle,
+            body: AppLocalizations.of(context)!.setupPushNotifications),
+        PageViewModel(
+            image: SvgPicture.asset(
+                "assets/undraw/undraw_active_options_re_8rj3.svg",
+                height: 175.0),
+            title: AppLocalizations.of(context)!.setupPushNotificationsTitle,
+            bodyWidget: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [NotificationElements()],
+            )),
       ],
       PageViewModel(
           image: SvgPicture.asset("assets/undraw/undraw_add_color_re_buro.svg",

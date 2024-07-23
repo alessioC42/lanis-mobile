@@ -1,24 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:countly_flutter_np/countly_flutter.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sph_plan/themes.dart';
 import 'package:stack_trace/stack_trace.dart';
 import 'package:sph_plan/startup.dart';
-
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/material.dart';
 import 'package:sph_plan/client/storage.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:workmanager/workmanager.dart';
-import 'background_service.dart' as background_service;
+import 'background_service.dart';
 import 'package:http_proxy/http_proxy.dart';
+
 
 void main() async {
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -28,42 +24,8 @@ void main() async {
   runZonedGuarded<Future<void>>(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    /* periodic background fetching is not supported on IOS due to battery saving restrictions
-    *  a workaround would be to use an external push service, but that would require the users to
-    *  transfer their passwords to a third party service, which is not acceptable.
-    *  Maybe someone will find a better solution in the future. It would be possible to provide a 
-    *  self-hosted solution per school, but that's some unlikely idea for the future.
-    *
-    *  edit: it should be possible to run an event on a specified time, but that would require the user to open the app at least once a day
-    */
-    if (Platform.isAndroid) {
-      PermissionStatus? notificationsPermissionStatus;
-
-      await Permission.notification.isDenied.then((value) async {
-        if (value) {
-          notificationsPermissionStatus =
-              await Permission.notification.request();
-        }
-      });
-      bool enableNotifications =
-          await globalStorage.read(key: StorageKey.settingsPushService) ==
-              "true";
-      int notificationInterval = int.parse(await globalStorage.read(
-          key: StorageKey.settingsPushServiceIntervall));
-
-      await Workmanager().cancelAll();
-      if ((notificationsPermissionStatus ?? PermissionStatus.granted)
-              .isGranted &&
-          enableNotifications) {
-        await Workmanager().initialize(background_service.callbackDispatcher,
-            isInDebugMode: kDebugMode);
-
-        await Workmanager().registerPeriodicTask(
-            "sphplanfetchservice-alessioc42-github-io",
-            "sphVertretungsplanUpdateService",
-            frequency: Duration(minutes: notificationInterval));
-      }
-    }
+    await initializeNotifications();
+    await setupBackgroundService();
 
     await initializeDateFormatting();
     if (!kDebugMode &&
