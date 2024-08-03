@@ -9,7 +9,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:sph_plan/client/client.dart';
 import 'package:sph_plan/view/calendar/calendar.dart';
-import 'package:sph_plan/view/conversations/conversations.dart';
+import 'package:sph_plan/view/conversations/overview.dart';
 import 'package:sph_plan/view/data_storage/data_storage.dart';
 import 'package:sph_plan/view/mein_unterricht/mein_unterricht.dart';
 import 'package:sph_plan/view/settings/settings.dart';
@@ -87,7 +87,7 @@ class _HomePageState extends State<HomePage> {
         isSupported: client.doesSupportFeature(SPHAppEnum.nachrichten),
         enableBottomNavigation: true,
         enableDrawer: true,
-        body: const ConversationsAnsicht()),
+        body: const ConversationsOverview()),
     Destination(
         label: (context) => AppLocalizations.of(context)!.lessons,
         icon: const Icon(Icons.school),
@@ -350,7 +350,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               Text(
                                 AppLocalizations.of(context)!
-                                    .noInternetConnection,
+                                    .noInternetConnection1,
                                 style: Theme.of(context).textTheme.labelLarge,
                               ),
                             ],

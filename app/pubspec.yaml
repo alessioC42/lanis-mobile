@@ -45,7 +45,7 @@ dependencies:
   shared_preferences: ^2.2.2
   rxdart: ^0.27.7
   stack_trace: ^1.11.1
-  styled_text: ^8.1.0
+  styled_text: ^9.0.0-beta-4
   linkify: ^5.0.0
   introduction_screen: ^3.1.12
   flutter_svg: ^2.0.10+1
@@ -66,10 +66,18 @@ dependencies:
     sdk: flutter
   logger: ^2.2.0
   simple_shadow: ^0.3.1
-  flutter_tagging_plus: ^4.0.2
   app_settings: ^5.1.1
   device_info_plus: ^10.1.0
+  flutter_chat_bubble: ^2.0.2
+  color_hash: ^1.0.1
+  flutter_animate: ^4.5.0
+  flutter_quill: ^9.1.1
+  quill_html_converter: ^9.3.2
+  flutter_tagging_plus: ^4.0.2
 
+# flutter_tagging_plus is old and isn't being updated since a long time.
+dependency_overrides:
+  flutter_keyboard_visibility: ^6.0.0
 
 flutter_launcher_icons:
   android: false

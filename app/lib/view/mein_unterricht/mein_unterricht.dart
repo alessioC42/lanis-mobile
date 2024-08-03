@@ -277,16 +277,18 @@ class _MeinUnterrichtAnsichtState extends State<MeinUnterrichtAnsicht>
                       ErrorView(
                         error: snapshot.data!.error!,
                         name: "Mein Unterricht",
-                        fetcher: meinUnterrichtFetcher,
+                        retry: retryFetcher(meinUnterrichtFetcher),
                       ),
                       ErrorView(
                           error: snapshot.data!.error!,
                           name: "Mein Unterricht",
-                          fetcher: meinUnterrichtFetcher),
+                          retry: retryFetcher(meinUnterrichtFetcher)
+                      ),
                       ErrorView(
                           error: snapshot.data!.error!,
                           name: "Mein Unterricht",
-                          fetcher: meinUnterrichtFetcher)
+                          retry: retryFetcher(meinUnterrichtFetcher)
+                      ),
                     ] else if (snapshot.data?.status ==
                             FetcherStatus.fetching ||
                         snapshot.data == null) ...[

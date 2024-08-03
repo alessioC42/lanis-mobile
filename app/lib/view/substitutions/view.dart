@@ -148,7 +148,7 @@ class _StaticSubstitutionsViewState extends State<StaticSubstitutionsView> with 
       return ErrorView(
         error: widget.lanisException!,
         name: AppLocalizations.of(context)!.substitutions,
-        fetcher: widget.fetcher,
+        retry: retryFetcher(widget.fetcher!),
       );
     } else if (widget.plan!.days.isEmpty) {
       // GlobalKeys for RefreshIndicator and Refresh-FAB

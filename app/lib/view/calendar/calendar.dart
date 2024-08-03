@@ -290,7 +290,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
             return ErrorView(
                 error: snapshot.data!.error!,
                 name: "Kalender",
-                fetcher: calendarFetcher);
+                retry: retryFetcher(calendarFetcher));
           } else if (snapshot.data?.status == FetcherStatus.fetching ||
               snapshot.data == null) {
             return const Center(child: CircularProgressIndicator());

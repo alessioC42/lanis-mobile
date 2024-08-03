@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:linkify/linkify.dart';
-import 'package:sph_plan/shared/unicode.dart';
 import 'package:styled_text/styled_text.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,18 +11,54 @@ class FormatPattern {
   late final String? endTag;
   late final int group;
   late final Map<String, String> map;
+  late final RegExp? specialCaseRegExp;
+  late final String? specialCaseTag;
+  late final List<int> specialCaseGroups;
 
   FormatPattern(
       {required this.regExp,
       this.startTag,
       this.endTag,
       this.group = 1,
-      this.map = const {}});
+      this.map = const {},
+      this.specialCaseRegExp,
+      this.specialCaseTag,
+      this.specialCaseGroups = const [1]});
+}
+
+class FormatStyle {
+  late final TextStyle textStyle;
+  late final Color timeColor;
+  late final Color linkBackground;
+  late final Color linkForeground;
+  late final Color codeBackground;
+  late final Color codeForeground;
+
+  FormatStyle({required this.textStyle,
+    required this.timeColor,
+    required this.linkBackground,
+    required this.linkForeground,
+    required this.codeBackground,
+    required this.codeForeground});
+}
+
+class DefaultFormatStyle extends FormatStyle {
+  late final BuildContext context;
+
+  DefaultFormatStyle({required this.context}) : super(
+    textStyle: Theme.of(context).textTheme.bodyMedium!,
+    timeColor: Theme.of(context).colorScheme.primary,
+    linkBackground: Theme.of(context).colorScheme.primary.withOpacity(0.25),
+    linkForeground: Theme.of(context).colorScheme.primary,
+    codeBackground: Theme.of(context).colorScheme.secondary.withOpacity(0.25),
+    codeForeground: Theme.of(context).colorScheme.onSurface
+  );
 }
 
 class FormattedText extends StatelessWidget {
   final String text;
-  const FormattedText({super.key, required this.text});
+  final FormatStyle formatStyle;
+  const FormattedText({super.key, required this.text, required this.formatStyle});
 
   /// Replaces all occurrences of map keys with their respective value
   String convertByMap(String string, Map<String, String> map) {
@@ -50,27 +85,43 @@ class FormattedText extends StatelessWidget {
   String convertLanisSyntax(String lanisStyledText) {
     final List<FormatPattern> formatPatterns = [
       FormatPattern(
+          regExp: RegExp(r"--(([^-]|-(?!-))+)--"),
+          specialCaseRegExp: RegExp(r"--((|.*)__(([^_]|_(?!_))+)__(.*|))--"),
+          specialCaseTag: "<del hasU=true>",
+          specialCaseGroups: [2, 3, 5],
+          startTag: "<del>",
+          endTag: "</del>"),
+      FormatPattern(
+          regExp: RegExp(r"__(([^_]|_(?!_))+)__"),
+          specialCaseRegExp: RegExp(r"__((|.*)--(([^-]|-(?!-))+)--(.*|))__"),
+          specialCaseTag: "<u hasDel=true>",
+          specialCaseGroups: [2, 3, 5],
+          startTag: "<u>",
+          endTag: "</u>"),
+      FormatPattern(
           regExp: RegExp(r"\*\*(([^*]|\*(?!\*))+)\*\*"),
           startTag: "<b>",
           endTag: "</b>"),
       FormatPattern(
-          regExp: RegExp(r"__(([^_]|_(?!_))+)__"),
-          startTag: "<u>",
-          endTag: "</u>"),
-      FormatPattern(regExp: RegExp(r"_\((\d+)\)"), map: digitsSubscript),
+          regExp: RegExp(r"_\((.*?)\)"),
+          startTag: "<sub>",
+          endTag: "</sub>"),
       FormatPattern(
-          regExp: RegExp(r"_(\d)(?:(?!\n)\s|(?=\n))"), map: digitsSubscript),
-      FormatPattern(regExp: RegExp(r"\^\((\d+)\)"), map: digitsSuperscript),
+          regExp: RegExp(r"_(.)\s"),
+          startTag: "<sub>",
+          endTag: "</sub>"),
       FormatPattern(
-          regExp: RegExp(r"\^(\d)(?:(?!\n)\s|(?=\n))"), map: digitsSuperscript),
+          regExp: RegExp(r"\^\((.*?)\)"),
+          startTag: "<sup>",
+          endTag: "</sup>"),
+      FormatPattern(
+          regExp: RegExp(r"\^(.)\s"),
+          startTag: "<sup>",
+          endTag: "</sup>"),
       FormatPattern(
           regExp: RegExp(r"~~(([^~]|~(?!~))+)~~"),
           startTag: "<i>",
           endTag: "</i>"),
-      FormatPattern(
-          regExp: RegExp(r"--(([^-]|-(?!-))+)--"),
-          startTag: "<del>",
-          endTag: "</del>"),
       FormatPattern(
           regExp: RegExp(r"`(?!``)(.*)(?<!``)`"),
           startTag: "<code>",
@@ -103,6 +154,16 @@ class FormattedText extends StatelessWidget {
     formattedText = formattedText.replaceAll('"', "&quot;");
     formattedText = formattedText.replaceAll("'", "&apos;");
 
+    // Apply special case formatting, mainly for the 2 TextDecoration tags: .underline and .lineThrough
+    // because without this always one of the TextDecoration exists, not both together.
+    for (final FormatPattern pattern in formatPatterns) {
+      if (pattern.specialCaseRegExp == null) break;
+      formattedText = formattedText.replaceAllMapped(
+          pattern.specialCaseRegExp!,
+              (match) =>
+          "${pattern.specialCaseTag ?? ""}${convertByMap(match.groups(pattern.specialCaseGroups).join(), pattern.map)}${pattern.endTag ?? ""}");
+    }
+
     // Apply formatting
     for (final FormatPattern pattern in formatPatterns) {
       formattedText = formattedText.replaceAllMapped(
@@ -110,7 +171,7 @@ class FormattedText extends StatelessWidget {
           (match) =>
               "${pattern.startTag ?? ""}${convertByMap(match.group(pattern.group)!, pattern.map)}${pattern.endTag ?? ""}");
     }
-
+    
     // Surround emails and links with <a> tag
     final List<LinkifyElement> linkifiedElements = linkify(formattedText,
         options: const LinkifyOptions(humanize: true, removeWww: true),
@@ -137,14 +198,36 @@ class FormattedText extends StatelessWidget {
   Widget build(BuildContext context) {
     return StyledText(
       text: convertLanisSyntax(text),
-      style: Theme.of(context).textTheme.bodyMedium,
+      style: formatStyle.textStyle,
       tags: {
-        "b": StyledTextTag(style: const TextStyle(fontWeight: FontWeight.bold)),
-        "u": StyledTextTag(
-            style: const TextStyle(decoration: TextDecoration.underline)),
-        "i": StyledTextTag(style: const TextStyle(fontStyle: FontStyle.italic)),
-        "del": StyledTextTag(
-            style: const TextStyle(decoration: TextDecoration.lineThrough)),
+        "b": const StyledTextTag(style: TextStyle(fontWeight: FontWeight.bold)),
+        "u": StyledTextCustomTag(
+            parse: (_, attributes) {
+              List<TextDecoration> textDecorations = [TextDecoration.underline];
+              if (attributes.containsKey("hasDel")) textDecorations.add(TextDecoration.lineThrough);
+
+              return TextStyle(
+                decoration: TextDecoration.combine(textDecorations),
+              );
+            }
+        ),
+        "i": const StyledTextTag(style: TextStyle(fontStyle: FontStyle.italic)),
+        "del": StyledTextCustomTag(
+          parse: (_, attributes) {
+            List<TextDecoration> textDecorations = [TextDecoration.lineThrough];
+            if (attributes.containsKey("hasU")) textDecorations.add(TextDecoration.underline);
+
+            return TextStyle(
+                decoration: TextDecoration.combine(textDecorations),
+            );
+          }
+        ),
+        "sup": const StyledTextTag(
+          style: TextStyle(fontFeatures: [FontFeature.superscripts()])
+        ),
+        "sub": const StyledTextTag(
+            style: TextStyle(fontFeatures: [FontFeature.subscripts()])
+        ),
         "code": StyledTextWidgetBuilderTag((context, _, textContent) => Padding(
               padding: const EdgeInsets.only(top: 2, bottom: 2),
               child: Container(
@@ -153,12 +236,13 @@ class FormattedText extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
                   color:
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.25),
+                  formatStyle.codeBackground,
                 ),
                 child: Text(
                   textContent!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: "Roboto Mono",
+                    color: formatStyle.codeForeground
                   ),
                 ),
               ),
@@ -169,13 +253,13 @@ class FormattedText extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 2),
                   child: Icon(Icons.calendar_today,
-                      size: 20, color: Theme.of(context).colorScheme.primary),
+                      size: 20, color: formatStyle.timeColor),
                 ),
                 Flexible(
                   child: Text(
                     textContent!,
                     style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: formatStyle.timeColor,
                         fontWeight: FontWeight.bold),
                   ),
                 )
@@ -187,13 +271,13 @@ class FormattedText extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 2),
                   child: Icon(Icons.access_time_filled,
-                      size: 20, color: Theme.of(context).colorScheme.primary),
+                      size: 20, color: formatStyle.timeColor),
                 ),
                 Flexible(
                   child: Text(
                     textContent!,
                     style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: formatStyle.timeColor,
                         fontWeight: FontWeight.bold),
                   ),
                 )
@@ -204,10 +288,10 @@ class FormattedText extends StatelessWidget {
 
           if (attributes["type"] == "url") {
             icon =
-                Icon(Icons.link, color: Theme.of(context).colorScheme.primary);
+                Icon(Icons.link, color: formatStyle.linkForeground);
           } else {
             icon = Icon(Icons.email_rounded,
-                color: Theme.of(context).colorScheme.primary);
+                color: formatStyle.linkForeground);
           }
 
           return Padding(
@@ -224,8 +308,7 @@ class FormattedText extends StatelessWidget {
                       left: 7, right: 8, top: 2, bottom: 2),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6),
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                    color: formatStyle.linkBackground,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -238,7 +321,7 @@ class FormattedText extends StatelessWidget {
                         child: Text(
                           textContent!,
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary),
+                              color: formatStyle.linkForeground),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),

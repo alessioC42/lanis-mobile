@@ -108,7 +108,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 body: ErrorView(
                     error: snapshot.error as LanisException,
                     name: "einer Abgabe",
-                    fetcher: null),
+                ),
               );
             }
 

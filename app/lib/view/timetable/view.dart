@@ -50,7 +50,7 @@ class _StaticTimetableViewState extends State<StaticTimetableView> {
       return ErrorView(
         error: widget.lanisException!,
         name: AppLocalizations.of(context)!.timeTable,
-        fetcher: widget.fetcher!,
+        retry: retryFetcher(widget.fetcher!),
       );
     }
     if (widget.data == null) {

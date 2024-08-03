@@ -277,7 +277,7 @@ class _StartupScreenState extends State<StartupScreen> {
           ? const Icon(Icons.wifi_off)
           : const Icon(Icons.error),
       title: Text(error is NoConnectionException
-          ? AppLocalizations.of(context)!.startupNoConnection
+          ? AppLocalizations.of(context)!.noInternetConnection2
           : AppLocalizations.of(context)!.startupError),
       content: Column(
         mainAxisSize: MainAxisSize.min,
