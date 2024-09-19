@@ -6,6 +6,7 @@ import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:sph_plan/error_builders.dart';
 import 'package:sph_plan/themes.dart';
 import 'package:sph_plan/view/conversations/shared.dart';
 import 'package:stack_trace/stack_trace.dart';
@@ -62,6 +63,9 @@ void main() async {
     AmoledNotifier.init();
 
     HttpProxy httpProxy = await HttpProxy.createHttpProxy();
+
+    addLogMessage('PROXY: ${httpProxy.host} ${httpProxy.port}');
+
     HttpOverrides.global=httpProxy;
 
     runApp(const App());
@@ -96,7 +100,6 @@ class App extends StatelessWidget {
                   return ValueListenableBuilder<bool>(
                     valueListenable: AmoledNotifier.notifier,
                     builder: (_, isAmoled, __) {
-
                       ThemeData darkTheme = getAmoledTheme(theme, isAmoled);
 
                       if (mode == ThemeMode.light || mode == ThemeMode.system && MediaQuery.of(context).platformBrightness == Brightness.light) {
@@ -104,16 +107,14 @@ class App extends StatelessWidget {
                       } else if (mode == ThemeMode.dark || mode == ThemeMode.system && MediaQuery.of(context).platformBrightness == Brightness.dark) {
                         BubbleStyles.init(darkTheme);
                       }
-
                       return MaterialApp(
                         title: 'Lanis Mobile',
                         theme: theme.lightTheme,
                         darkTheme: darkTheme,
                         themeMode: mode,
-                        localizationsDelegates:
-                        AppLocalizations.localizationsDelegates,
+                        localizationsDelegates: AppLocalizations.localizationsDelegates,
                         supportedLocales: AppLocalizations.supportedLocales,
-                        home: const StartupScreen(),
+                        home: const InbetweenClass(),
                       );
                     }
                   );
@@ -122,6 +123,31 @@ class App extends StatelessWidget {
     });
   }
 }
+
+
+class InbetweenClass extends StatefulWidget {
+  const InbetweenClass({super.key});
+
+  @override
+  State<StatefulWidget> createState() => _InbetweenClassState();
+}
+
+class _InbetweenClassState extends State<StatefulWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: ElevatedButton(onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const StartupScreen(),)
+          );
+        }, child: Text("start")),
+      ),
+      floatingActionButton: getAPPFAB(context),
+    );
+  }
+}
+
 
 Widget errorWidget(FlutterErrorDetails details, {BuildContext? context}) {
   return ListView(children: [

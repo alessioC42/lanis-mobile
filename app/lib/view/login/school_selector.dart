@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import 'package:sph_plan/error_builders.dart';
 
 class SchoolSelector extends StatefulWidget {
   const SchoolSelector({super.key, required this.controller, required this.outContext, required this.onSchoolSelected});
@@ -47,7 +48,9 @@ class _SchoolSelectorState extends State<SchoolSelector> {
       setState(() {
         schoolBezirke = result;
       });
-    } catch (e) {
+    } catch (e, stack) {
+      addLogMessage(e.toString());
+      addLogMessage(stack.toString());
       // Show a SnackBar to inform the user
       ScaffoldMessenger.of(widget.outContext).showSnackBar(
         SnackBar(

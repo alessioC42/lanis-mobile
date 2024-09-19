@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:introduction_screen/introduction_screen.dart';
+import 'package:sph_plan/error_builders.dart';
 import 'package:sph_plan/view/login/setup_screen_page_view_models.dart';
 import 'auth.dart';
 import 'intro_screen_page_view_models.dart';
@@ -69,6 +70,9 @@ class _WelcomeLoginScreenState extends State<WelcomeLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(canPop: false, child: buildBody());
+    return PopScope(canPop: false, child: Scaffold(
+      floatingActionButton: getAPPFAB(context),
+      body: buildBody()
+    ));
   }
 }
