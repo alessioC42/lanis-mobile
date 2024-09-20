@@ -22,8 +22,9 @@ environment:
 dependencies:
   http_proxy:
     git:
-      url: https://github.com/Rajala1404/http_proxy.git
-      ref: 41d7f3d
+      url: https://github.com/lanis-mobile/http_proxy.git
+      ref: 1d8fe74
+      branch: pac-support
   flutter:
     sdk: flutter
   dio_cookie_manager: ^3.1.0+1
