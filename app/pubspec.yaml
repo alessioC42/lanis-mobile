@@ -23,7 +23,7 @@ dependencies:
   http_proxy:
     git:
       url: https://github.com/lanis-mobile/http_proxy.git
-      ref: 1d8fe74
+      ref: 05ddb83
       branch: pac-support
   flutter:
     sdk: flutter

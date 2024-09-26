@@ -65,6 +65,7 @@ void main() async {
     HttpProxy httpProxy = await HttpProxy.createHttpProxy();
 
     addLogMessage('PROXY: ${httpProxy.host} ${httpProxy.port}');
+    addLogMessage('PAC:\n\tIs used: ${await HttpProxy.isPACUsed()}\n\tURL: ${await HttpProxy.getPACURL()}');
 
     HttpOverrides.global=httpProxy;
 
