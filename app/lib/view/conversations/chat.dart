@@ -18,9 +18,17 @@ class ConversationsChat extends StatefulWidget {
   final String id; // uniqueId
   final String title;
   final NewConversationSettings? newSettings;
+  final bool hidden;
 
   const ConversationsChat(
-      {super.key, required this.title, required this.id, this.newSettings});
+      {super.key, required this.title, required this.id, this.newSettings,
+        this.hidden = false});
+
+  ConversationsChat.fromEntry(OverviewEntry entry)
+      : id = entry.id
+      , title = entry.title
+      , newSettings = null
+      , hidden = entry.hidden;
 
   @override
   State<ConversationsChat> createState() => _ConversationsChatState();
@@ -42,6 +50,8 @@ class _ConversationsChatState extends State<ConversationsChat>
   late final ConversationSettings settings;
   late final ParticipationStatistics? statistics;
 
+  late bool hidden;
+
   final List<dynamic> chat = [];
 
   @override
@@ -50,6 +60,7 @@ class _ConversationsChatState extends State<ConversationsChat>
     appBarController = AnimationController(vsync: this);
     scrollController.addListener(animateAppBarTitle);
     scrollController.addListener(toggleScrollToBottomFab);
+    hidden = widget.hidden;
   }
 
   @override
@@ -75,6 +86,42 @@ class _ConversationsChatState extends State<ConversationsChat>
     } else if (scrollController.offset == 0 && appBarController.value == 1) {
       appBarController.reverse();
     }
+  }
+
+  void showErrorDialog() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.error),
+          title: Text(AppLocalizations.of(context)!.errorOccurred),
+          actions: [
+            FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(AppLocalizations.of(context)!.back)
+            )
+          ],
+        )
+    );
+  }
+
+  void showNoInternetDialog() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.wifi_off),
+          title: Text(AppLocalizations.of(context)!.noInternetConnection2),
+          actions: [
+            FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(AppLocalizations.of(context)!.back)
+            )
+          ],
+        )
+    );
   }
 
   static DateTime parseDateString(String date) {
@@ -379,6 +426,75 @@ class _ConversationsChatState extends State<ConversationsChat>
                           icon: const Icon(Icons.warning),
                         ),
                       ],
+                      IconButton(
+                          onPressed: () async {
+                            if (hidden == true) {
+                              bool result;
+                              try {
+                                result = await client.conversations.showConversation(widget.id);
+                              } on NoConnectionException {
+                                showNoInternetDialog();
+                                return;
+                              }
+
+
+                              if (!result) {
+                                showErrorDialog();
+                                return;
+                              } else {
+                                setState(() {
+                                  hidden = false;
+                                });
+                                client.conversations.filter.toggleEntry(widget.id, hidden: true);
+                                client.conversations.filter.supply();
+                              }
+
+                              return;
+                            }
+
+                            showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  icon: const Icon(Icons.visibility_off),
+                                  title: Text(AppLocalizations.of(context)!.conversationHide),
+                                  content: Text(AppLocalizations.of(context)!.hideNote),
+                                  actions: [
+                                    OutlinedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text(AppLocalizations.of(context)!.back)
+                                    ),
+                                    FilledButton(
+                                        onPressed: () async {
+                                          bool result = false;
+                                          try {
+                                            result = await client.conversations.hideConversation(widget.id);
+                                          } on NoConnectionException {
+                                            showNoInternetDialog();
+                                            return;
+                                          }
+
+                                          if (!result) {
+                                            showErrorDialog();
+                                            return;
+                                          } else {
+                                            setState(() {
+                                              hidden = true;
+                                            });
+                                            client.conversations.filter.toggleEntry(widget.id, hidden: true);
+                                          }
+
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text(AppLocalizations.of(context)!.conversationHide)
+                                    )
+                                  ],
+                                )
+                            );
+                          },
+                          icon: hidden ? const Icon(Icons.visibility) : const Icon(Icons.visibility_off)
+                      ),
                       if (statistics != null) ...[
                         IconButton(
                           onPressed: () {

@@ -17,24 +17,28 @@ import '../logger.dart';
 class ConversationsParser {
   late Dio dio;
   late SPHclient client;
-  bool? canChooseTypeCached;
+  late OverviewFiltering filter;
+
+  bool? cachedCanChooseType;
 
   ConversationsParser(Dio dioClient, this.client) {
     dio = dioClient;
+    filter = OverviewFiltering();
   }
 
-  Future<dynamic> getOverview(bool invisible) async {
+  /// Gets the entries which you can see in the overview.
+  Future<List<OverviewEntry>> getOverview() async {
     if (!(client.doesSupportFeature(SPHAppEnum.nachrichten))) {
       throw NotSupportedException();
     }
 
-    logger.i("Get new conversation data. Invisible: $invisible.");
+    logger.i("Get new conversation data.");
     try {
       final response =
           await dio.post("https://start.schulportal.hessen.de/nachrichten.php",
               data: {
                 "a": "headers",
-                "getType": invisible ? "unvisibleOnly" : "visibleOnly",
+                "getType": "All", // "unvisibleOnly", "visibleOnly" also possible
                 "last": "0"
               },
               options: Options(
@@ -49,8 +53,17 @@ class ConversationsParser {
                 },
               ));
 
-      return compute(
+      final dynamic json = await compute(
           computeJson, [response.toString(), client.cryptor.key.bytes]);
+
+      List<OverviewEntry> entries = [];
+      for (final entry in json) {
+        entries.add(OverviewEntry.fromJson(entry));
+      }
+
+      filter.entries = entries;
+
+      return filter.filteredAndSearched(entries);
     } on (SocketException, DioException) {
       throw NetworkException();
     } on LanisException {
@@ -60,6 +73,7 @@ class ConversationsParser {
     }
   }
 
+  // Move decrypting and decoding away from the main thread to avoid freezing.
   static dynamic computeJson(List<dynamic> args) {
     try {
       final Map<String, dynamic> encryptedJSON = jsonDecode(args[0]);
@@ -77,6 +91,80 @@ class ConversationsParser {
     }
   }
 
+  /// Hides the conversation
+  /// [id] is the **"Uniquid"** of the conversation.
+  Future<bool> hideConversation(String id) async {
+    if (!(await connectionChecker.connected)) {
+      throw NoConnectionException();
+    }
+
+    try {
+      final response = await dio.post(
+          "https://start.schulportal.hessen.de/nachrichten.php",
+          data: {"a": "deleteAll", "uniqid": id},
+          options: Options(
+            headers: {
+              "Accept": "*/*",
+              "Content-Type":
+              "application/x-www-form-urlencoded; charset=UTF-8",
+              "Sec-Fetch-Dest": "empty",
+              "Sec-Fetch-Mode": "cors",
+              "Sec-Fetch-Site": "same-origin",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          )
+      );
+
+      return bool.parse(response.data);
+    } on (SocketException, DioException) {
+      throw NetworkException();
+    } catch (e) {
+      throw UnknownException();
+    }
+  }
+
+  /// Shows a hidden conversation.
+  /// [id] is the **"Uniquid"** of the conversation.
+  Future<bool> showConversation(String id) async {
+    if (!(await connectionChecker.connected)) {
+      throw NoConnectionException();
+    }
+
+    try {
+      final response = await dio.post(
+          "https://start.schulportal.hessen.de/nachrichten.php",
+          data: {"a": "recycleMsg", "uniqid": id},
+          options: Options(
+            headers: {
+              "Accept": "*/*",
+              "Content-Type":
+              "application/x-www-form-urlencoded; charset=UTF-8",
+              "Sec-Fetch-Dest": "empty",
+              "Sec-Fetch-Mode": "cors",
+              "Sec-Fetch-Site": "same-origin",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          )
+      );
+
+      return bool.parse(response.data);
+    } on (SocketException, DioException) {
+      throw NetworkException();
+    } catch (e) {
+      throw UnknownException();
+    }
+  }
+
+  // Sometimes usernames are the same as "SenderName", a HTML-Element.
+  String fixUsername(String username) {
+    if (!username.contains("fa-user")) {
+      return username;
+    }
+
+    return parse(username).querySelector("span")!.text.trim();
+  }
+
+  /// Gets a whole single conversation with statistics.
   Future<Conversation> getSingleConversation(String uniqueID) async {
     if (!(await connectionChecker.connected)) {
       throw NoConnectionException();
@@ -115,7 +203,7 @@ class ConversationsParser {
 
       final UnparsedMessage parent = UnparsedMessage(
           date: conversation["Datum"],
-          author: conversation["username"],
+          author: fixUsername(conversation["username"]),
           own: conversation["own"],
           content: conversation["Inhalt"]);
 
@@ -123,7 +211,7 @@ class ConversationsParser {
       for (dynamic reply in conversation["reply"]) {
         replies.add(UnparsedMessage(
             date: reply["Datum"],
-            author: reply["username"],
+            author: fixUsername(reply["username"]),
             own: reply["own"],
             content: reply["Inhalt"]));
       }
@@ -141,7 +229,7 @@ class ConversationsParser {
 
       final Set<KnownParticipant> knownParticipants = {
         KnownParticipant(
-            name: conversation["username"],
+            name: fixUsername(conversation["username"]),
             type: PersonType.fromJson(conversation["SenderArt"])
         )
       };
@@ -149,7 +237,7 @@ class ConversationsParser {
       for (Map reply in conversation["reply"]) {
         knownParticipants.add(
           KnownParticipant(
-              name: reply["username"],
+              name: fixUsername(reply["username"]),
               type: PersonType.fromJson(reply["SenderArt"])
           )
         );
@@ -162,7 +250,7 @@ class ConversationsParser {
         }
       }
 
-      if (conversation["WeitereEmpfaenger"] != "") {
+      if (conversation["WeitereEmpfaenger"] != "" && conversation["WeitereEmpfaenger"] != null) {
         final others =
             parse(conversation["WeitereEmpfaenger"]).querySelectorAll("span");
         for (final other in others) {
@@ -313,8 +401,8 @@ class ConversationsParser {
   }
 
   Future<bool> canChooseType() async {
-    if (canChooseTypeCached != null) {
-      return canChooseTypeCached!;
+    if (cachedCanChooseType != null) {
+      return cachedCanChooseType!;
     }
 
     if (!(await connectionChecker.connected)) {
@@ -335,9 +423,9 @@ class ConversationsParser {
 
       final document = parse(html.data);
 
-      canChooseTypeCached = document.querySelector("#MsgOptions") != null;
+      cachedCanChooseType = document.querySelector("#MsgOptions") != null;
 
-      return canChooseTypeCached!;
+      return cachedCanChooseType!;
     } on (SocketException, DioException) {
       throw NetworkException();
     } catch (e) {
@@ -390,5 +478,103 @@ class ConversationsParser {
     } catch (e) {
       throw UnknownException();
     }
+  }
+}
+
+/// Collection of filter functions for the search.
+enum SearchFunction {
+  subject,
+  schedule, // can't use "date" bc of l10n
+  name;
+
+  static final functions = {
+    SearchFunction.subject: (OverviewEntry entry, String search) =>
+        entry.title.toLowerCase().contains(search.toLowerCase()),
+    SearchFunction.name: (OverviewEntry entry, String search) =>
+        (entry.shortName != null &&
+            entry.shortName!.toLowerCase().contains(search.toLowerCase())) ||
+        entry.fullName.toLowerCase().contains(search.toLowerCase()),
+    SearchFunction.schedule: (OverviewEntry entry, String search) =>
+        entry.date.toLowerCase().contains(search.toLowerCase()),
+  };
+
+  call(OverviewEntry entry, String search) {
+    return functions[this]!(entry, search);
+  }
+}
+
+/// A useful class to directly modify the most recent downloaded overview stream,
+/// so it's fast.
+class OverviewFiltering {
+  /// Cached overview entries set by a [getOverview] call.
+  List<OverviewEntry> entries = [];
+
+  /// Skip current options when in toggle mode.
+  bool toggleMode = false;
+
+  bool showHidden = false;
+  String simpleSearch = "";
+
+  final advancedSearch = {
+    SearchFunction.subject: "",
+    SearchFunction.name: "",
+    SearchFunction.schedule: "",
+  };
+
+  OverviewFiltering();
+
+  void supply() {
+    client.fetchers.conversationsFetcher.supply(filteredAndSearched(entries));
+  }
+  
+  void toggleEntry(String id, {bool? hidden, bool? unread}) {
+    final index = entries.indexWhere((entry) => entry.id == id);
+    entries.replaceRange(index, index + 1, [entries[index].copyWith(
+        hidden: hidden == null || hidden == false ? null : !entries[index].hidden,
+        unread: unread == null || unread == false ? null : !entries[index].unread,
+    )]);
+  }
+
+  List<OverviewEntry> filteredAndSearched(List<OverviewEntry> entries) {
+    return searched(filtered(entries));
+  }
+
+  /// Show all conversations or just non-hidden ones.
+  List<OverviewEntry> filtered(List<OverviewEntry> entries) {
+    if (showHidden || toggleMode) {
+      return entries;
+    }
+
+    return entries.where((entry) => entry.hidden == false).toList();
+  }
+
+  List<OverviewEntry> advancedSearched(List<OverviewEntry> entries, SearchFunction function) {
+    return entries.where((entry) => function.call(entry, advancedSearch[function]!)).toList();
+  }
+
+  List<OverviewEntry> searched(List<OverviewEntry> entries) {
+    List<OverviewEntry> newEntries = [];
+
+    // Basic search which often is enough.
+    for (int i = 0; i < entries.length; i++) {
+      bool add = false;
+      for (final function in SearchFunction.values) {
+        if (function.call(entries[i], simpleSearch)) {
+          add = true;
+          break;
+        }
+      }
+
+      if (add) {
+        newEntries.add(entries[i]);
+      }
+    }
+
+    // Search with the expanded precision search.
+    for (final function in advancedSearch.keys) {
+      newEntries = advancedSearched(newEntries, function);
+    }
+
+    return newEntries;
   }
 }

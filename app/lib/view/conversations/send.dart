@@ -127,7 +127,7 @@ class _ConversationsSendState extends State<ConversationsSend> {
             text);
 
     if (response.success) {
-      client.fetchers.invisibleConversationsFetcher.fetchData(forceRefresh: true);
+      client.fetchers.conversationsFetcher.fetchData(forceRefresh: true);
 
       Navigator.pop(context);
       Navigator.pop(context);
