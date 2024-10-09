@@ -115,13 +115,13 @@ class _AsyncSearchAnchorState extends State<AsyncSearchAnchor> {
     }, suggestionsBuilder:
             (BuildContext context, SearchController controller) async {
       _searchingWithQuery = controller.text;
-      var options = await client.dataStorage.searchFiles(_searchingWithQuery!);
+      var options = await client.dataStorage.searchFiles(_searchingWithQuery??'');
 
       if (_searchingWithQuery != controller.text) {
         return _lastOptions;
       }
 
-      _lastOptions = List<Widget>.generate(options.length, (int index) {
+      _lastOptions = List<Widget>.generate(options?.length??0, (int index) {
         final Map item = options[index];
         return SearchFileListTile(
             context: context,

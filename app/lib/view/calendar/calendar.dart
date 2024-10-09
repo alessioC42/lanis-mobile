@@ -10,6 +10,7 @@ import '../../client/client.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../client/logger.dart';
 import '../../shared/widgets/error_view.dart';
+import '../../shared/types/calendar_event.dart';
 
 class CalendarAnsicht extends StatefulWidget {
   const CalendarAnsicht({super.key});
@@ -21,12 +22,13 @@ class CalendarAnsicht extends StatefulWidget {
 class _CalendarAnsichtState extends State<CalendarAnsicht> {
   CalendarFetcher calendarFetcher = client.fetchers.calendarFetcher;
 
-  late final ValueNotifier<List<Event>> _selectedEvents;
+  late final ValueNotifier<List<CalendarEvent>> _selectedEvents;
 
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  List<Event> eventList = [];
+  List<CalendarEvent> eventList = [];
+  SearchController searchController = SearchController();
 
   @override
   void dispose() {
@@ -38,13 +40,49 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
   void initState() {
     super.initState();
 
+    searchController.addListener(() {
+      if (!searchController.isOpen) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
+    });
+
     _selectedDay = _focusedDay;
     _selectedEvents = ValueNotifier(_getEventsForDay(_selectedDay!));
 
     calendarFetcher.fetchData();
   }
 
-  Future<dynamic> fetchEvent(String id, {secondTry = false}) async {
+  List<CalendarEvent> fuzzySearchEventList(String query) {
+    List<CalendarEvent> searchResults = [];
+    for (var event in eventList) {
+      String searchString = '${event.title} ${event.description} ${event.place??''} ${event.startTime.year}'.toLowerCase();
+      if (searchString.contains(query.toLowerCase())) {
+        searchResults.add(event);
+      }
+    }
+
+    // Sort by distance to today
+    searchResults.sort((a, b) {
+      int distanceA = a.startTime.differenceInDays(DateTime.now());
+      int distanceB = b.startTime.differenceInDays(DateTime.now());
+      return distanceA.compareTo(distanceB);
+    });
+
+    // move elements of the past to the end
+    searchResults.sort((a, b) {
+      if (a.startTime.isBefore(DateTime.now()) && b.startTime.isAfter(DateTime.now())) {
+        return 1;
+      } else if (a.startTime.isAfter(DateTime.now()) && b.startTime.isBefore(DateTime.now())) {
+        return -1;
+      } else {
+        return 0;
+      }
+    });
+
+    return searchResults;
+  }
+
+  Future<Map<String, dynamic>?> fetchEvent(String id, {secondTry = false}) async {
     try {
       if (secondTry) {
         await client.login();
@@ -56,10 +94,11 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
         fetchEvent(id, secondTry: true);
       }
     }
+    return null;
   }
 
-  List<Event> _getEventsForDay(DateTime day) {
-    List<Event> validEvents = [];
+  List<CalendarEvent> _getEventsForDay(DateTime day) {
+    List<CalendarEvent> validEvents = [];
 
     for (var event in eventList) {
       // Compare only the date part of startTime and endTime
@@ -93,7 +132,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
 
   bool doesEntryExist(dynamic entry) => entry != null && entry != "";
 
-  Widget getEvent(Event calendarData, Map<String, dynamic> singleEventData) {
+  Widget eventBottomSheet(CalendarEvent calendarData, Map<String, dynamic> singleEventData) {
     const double iconSize = 24;
 
     // German-formatted readable date string
@@ -102,7 +141,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
     String startTime = calendarData.startTime.format("E d MMM y", "de_DE");
     String endTime = calendarData.endTime.format("E d MMM y", "de_DE");
 
-    if (calendarData.data["allDay"] == true) {
+    if (calendarData.allDay) {
       if (startTime == endTime) {
         date += startTime;
       } else {
@@ -195,7 +234,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
               ),
             ),
             // Place
-            if (doesEntryExist(calendarData.data["Ort"])) ...[
+            if (doesEntryExist(calendarData.place)) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 4.0),
                 child: Row(
@@ -207,7 +246,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
                         size: iconSize,
                       ),
                     ),
-                    Text(calendarData.data["Ort"],
+                    Text(calendarData.place!,
                         style: Theme.of(context).textTheme.labelLarge)
                   ],
                 ),
@@ -236,7 +275,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
                 ),
               ),
             ],
-            if (doesEntryExist(calendarData.data["Lerngruppe"])) ...[
+            if (doesEntryExist(calendarData.lerngruppe)) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 4.0),
                 child: Row(
@@ -249,14 +288,14 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
                       ),
                     ),
                     Flexible(
-                      child: Text(calendarData.data["Lerngruppe"]["Name"],
+                      child: Text(calendarData.lerngruppe["Name"],
                           style: Theme.of(context).textTheme.labelLarge),
                     )
                   ],
                 ),
               ),
             ],
-            if (doesEntryExist(calendarData.data["description"])) ...[
+            if (doesEntryExist(calendarData.description)) ...[
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Linkify(
@@ -265,8 +304,7 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
                       logger.w("${link.url} konnte nicht geöffnet werden.");
                     }
                   },
-                  text: calendarData.data["description"]
-                      .replaceAll("<br />", "\n"),
+                  text: calendarData.description.replaceAll("<br />", "\n"),
                   style: Theme.of(context).textTheme.bodyLarge,
                   linkStyle: Theme.of(context)
                       .textTheme
@@ -281,165 +319,205 @@ class _CalendarAnsichtState extends State<CalendarAnsicht> {
     );
   }
 
+  void openEventBottomSheet(CalendarEvent calendarData, {bool unFocusAfter = true})  async {
+    try {
+      var singleEvent = await fetchEvent(calendarData.id);
+      if (singleEvent == null) return;
+      await showModalBottomSheet(
+          context: context,
+          showDragHandle: true,
+          builder: (context) {
+            return eventBottomSheet(calendarData, singleEvent);
+          });
+      if (unFocusAfter) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
+    } on NoConnectionException {
+      if (mounted) {
+        return;
+      }
+    } on LanisException catch (ex) {
+      if (mounted) {
+        await showModalBottomSheet(
+          context: context,
+          showDragHandle: true,
+          builder: (context) {
+            return ErrorView(
+              error: ex,
+              name: "einem Kalenderereignis",
+            );
+          },
+        );
+        if (unFocusAfter) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<FetcherResponse>(
-        stream: calendarFetcher.stream,
-        builder: (context, snapshot) {
-          if (snapshot.data?.status == FetcherStatus.error) {
-            return ErrorView(
-                error: snapshot.data!.error!,
-                name: "Kalender",
-                retry: retryFetcher(calendarFetcher));
-          } else if (snapshot.data?.status == FetcherStatus.fetching ||
-              snapshot.data == null) {
-            return const Center(child: CircularProgressIndicator());
-          } else {
-            List<Event> updatedEventList = [];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          child: SearchAnchor.bar(
+            searchController: searchController,
+            isFullScreen: false,
+            barTrailing: [
+              if (!_selectedDay!.isSameDay(DateTime.now())) IconButton(
+                icon: const Icon(Icons.restore),
+                onPressed: () {
+                  setState(() {
+                    searchController.text = "";
+                    _selectedDay = DateTime.now();
+                    _focusedDay = DateTime.now();
+                  });
+                },
+              ),
+            ],
+            onSubmitted: (_) {
+              FocusScope.of(context).requestFocus(FocusNode());
+              //searchController.closeView(null);
+            },
+            suggestionsBuilder: (context, _searchController) {
+                final results = fuzzySearchEventList(_searchController.text);
 
-            snapshot.data?.content.forEach((event) {
-              updatedEventList.add(Event(
-                  event["title"],
-                  event,
-                  parseDateString(event["Anfang"]),
-                  parseDateString(event["Ende"])));
-            });
-
-            eventList = updatedEventList;
-            _selectedEvents.value = _getEventsForDay(_selectedDay!);
-
-            return Column(
-              children: [
-                TableCalendar<Event>(
-                  locale: AppLocalizations.of(context)!.locale,
-                  firstDay: DateTime.utc(2020),
-                  lastDay: DateTime.utc(2030),
-                  availableCalendarFormats: {
-                    CalendarFormat.month:
-                        AppLocalizations.of(context)!.calendarFormatMonth,
-                    CalendarFormat.twoWeeks:
-                        AppLocalizations.of(context)!.calendarFormatTwoWeeks,
-                    CalendarFormat.week:
-                        AppLocalizations.of(context)!.calendarFormatWeek,
-                  },
-                  focusedDay: _focusedDay,
-                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                  calendarFormat: _calendarFormat,
-                  eventLoader: _getEventsForDay,
-                  startingDayOfWeek: StartingDayOfWeek.monday,
-                  calendarStyle: CalendarStyle(
-                      outsideDaysVisible: false,
-                      defaultDecoration:
-                          const BoxDecoration(shape: BoxShape.circle),
-                      selectedDecoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle),
-                      selectedTextStyle: TextStyle(
-                          fontSize: 16.0,
-                          color: Theme.of(context).colorScheme.onPrimary),
-                      todayDecoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondary,
-                        shape: BoxShape.circle,
-                      ),
-                      todayTextStyle: TextStyle(
-                        color: Theme.of(context).colorScheme.onSecondary,
-                        fontSize: 16,
-                      ),
-                      markerDecoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Theme.of(context).colorScheme.inversePrimary)),
-                  onDaySelected: _onDaySelected,
-                  onFormatChanged: (format) {
-                    if (_calendarFormat != format) {
-                      setState(() {
-                        _calendarFormat = format;
-                      });
-                    }
-                  },
-                  headerStyle: HeaderStyle(
-                      formatButtonTextStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary),
-                      formatButtonDecoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(24))),
-                  onPageChanged: (focusedDay) {
-                    _focusedDay = focusedDay;
+                return results.map((event) => ListTile(
+                  title: Text(event.title),
+                  subtitle: Text('${event.startTime.format("E d MMM y", "de_DE")} - ${event.endTime.format("E d MMM y", "de_DE")}'),
+                  leading: event.endTime.isBefore(DateTime.now()) ? const Icon(Icons.done) : const Icon(Icons.event),
+                  onTap: () {
+                    setState(() {
+                      _selectedDay = event.startTime;
+                      _focusedDay = event.startTime;
+                    });
+                    _searchController.closeView(null);
+                    FocusScope.of(context).unfocus();
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    openEventBottomSheet(event);
                   },
                 ),
-                Expanded(
-                  child: ValueListenableBuilder<List<Event>>(
-                    valueListenable: _selectedEvents,
-                    builder: (context, value, _) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: ListView.builder(
-                          itemCount: value.length,
-                          itemBuilder: (context, index) {
+              ).toList();
+            },
+          ),
+        ),
+        Expanded(
+            child: StreamBuilder<FetcherResponse<List<CalendarEvent>>>(
+              stream: calendarFetcher.stream,
+              builder: (context, snapshot) {
+                if (snapshot.data?.status == FetcherStatus.error) {
+                  return ErrorView(
+                      error: snapshot.data!.error!,
+                      name: "Kalender",
+                      retry: retryFetcher(calendarFetcher));
+                } else if (snapshot.data?.status == FetcherStatus.fetching ||
+                    snapshot.data == null) {
+                  return const Center(child: CircularProgressIndicator());
+                } else {
+                  eventList = snapshot.data!.content ?? [];
+                  _selectedEvents.value = _getEventsForDay(_selectedDay!);
+
+                  return Column(
+                    children: [
+                      TableCalendar<CalendarEvent>(
+                        locale: AppLocalizations.of(context)!.locale,
+                        firstDay: DateTime.utc(2020),
+                        lastDay: DateTime.utc(2030),
+                        availableCalendarFormats: {
+                          CalendarFormat.month:
+                          AppLocalizations.of(context)!.calendarFormatMonth,
+                          CalendarFormat.twoWeeks:
+                          AppLocalizations.of(context)!.calendarFormatTwoWeeks,
+                          CalendarFormat.week:
+                          AppLocalizations.of(context)!.calendarFormatWeek,
+                        },
+                        focusedDay: _focusedDay,
+                        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                        calendarFormat: _calendarFormat,
+                        eventLoader: _getEventsForDay,
+                        startingDayOfWeek: StartingDayOfWeek.monday,
+                        calendarStyle: CalendarStyle(
+                            outsideDaysVisible: false,
+                            defaultDecoration:
+                            const BoxDecoration(shape: BoxShape.circle),
+                            selectedDecoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle),
+                            selectedTextStyle: TextStyle(
+                                fontSize: 16.0,
+                                color: Theme.of(context).colorScheme.onPrimary),
+                            todayDecoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.secondary,
+                              shape: BoxShape.circle,
+                            ),
+                            todayTextStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.onSecondary,
+                              fontSize: 16,
+                            ),
+                            markerDecoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Theme.of(context).colorScheme.inversePrimary)),
+                        onDaySelected: _onDaySelected,
+                        pageJumpingEnabled: true,
+                        onFormatChanged: (format) {
+                          if (_calendarFormat != format) {
+                            setState(() {
+                              _calendarFormat = format;
+                            });
+                          }
+                        },
+                        headerStyle: HeaderStyle(
+                            formatButtonTextStyle: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary),
+                            formatButtonDecoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(24),
+                            ),
+                        ),
+                        onPageChanged: (focusedDay) {
+                          _focusedDay = focusedDay;
+                        },
+                      ),
+                      Expanded(
+                        child: ValueListenableBuilder<List<CalendarEvent>>(
+                          valueListenable: _selectedEvents,
+                          builder: (context, value, _) {
                             return Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 8, right: 8, bottom: 4),
-                              child: Card(
-                                child: ListTile(
-                                  title: Text('${value[index]}'),
-                                  trailing: const Icon(Icons.arrow_right),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  onTap: () async {
-                                    try {
-                                      var singleEvent = await fetchEvent(
-                                          value[index].data["Id"]);
-                                      showModalBottomSheet(
-                                          context: context,
-                                          showDragHandle: true,
-                                          builder: (context) {
-                                            return getEvent(
-                                                value[index], singleEvent);
-                                          });
-                                    } on NoConnectionException {
-                                      if (mounted) {
-                                        return;
-                                      }
-                                    } on LanisException catch (ex) {
-                                      if (mounted) {
-                                        showModalBottomSheet(
-                                            context: context,
-                                            showDragHandle: true,
-                                            builder: (context) {
-                                              return ErrorView(
-                                                error: ex,
-                                                name: "einem Kalenderereignis",
-                                              );
-                                            });
-                                      }
-                                    }
-                                  },
-                                ),
+                              padding: const EdgeInsets.only(top: 12),
+                              child: ListView.builder(
+                                itemCount: value.length,
+                                itemBuilder: (context, index) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 8, right: 8, bottom: 4),
+                                    child: Card(
+                                      child: ListTile(
+                                        title: Text(value[index].title),
+                                        trailing: const Icon(Icons.arrow_right),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        onTap: () => openEventBottomSheet(value[index]),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          }
-        });
+                      ),
+                    ],
+                  );
+                }
+              },
+            )
+        ),
+      ],
+    );
   }
-}
-
-class Event {
-  final String title;
-  final Map<String, dynamic> data;
-  final DateTime startTime;
-  final DateTime endTime;
-
-  const Event(this.title, this.data, this.startTime, this.endTime);
-
-  @override
-  String toString() => title;
 }
 
 List<DateTime> daysInRange(DateTime first, DateTime last) {
@@ -448,24 +526,4 @@ List<DateTime> daysInRange(DateTime first, DateTime last) {
     dayCount,
     (index) => DateTime.utc(first.year, first.month, first.day + index),
   );
-}
-
-DateTime parseDateString(String dateString) {
-  // Parse the date string
-  List<String> dateTimeParts = dateString.split(' ');
-  List<String> dateParts = dateTimeParts[0].split('-');
-  List<String> timeParts = dateTimeParts[1].split(':');
-
-  // Extract year, month, day, hour, minute, and second
-  int year = int.parse(dateParts[0]);
-  int month = int.parse(dateParts[1]);
-  int day = int.parse(dateParts[2]);
-  int hour = int.parse(timeParts[0]);
-  int minute = int.parse(timeParts[1]);
-  int second = int.parse(timeParts[2]);
-
-  // Create a DateTime object
-  DateTime dateTime = DateTime(year, month, day, hour, minute, second);
-
-  return dateTime;
 }
