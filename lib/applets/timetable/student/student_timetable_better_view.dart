@@ -369,22 +369,26 @@ class TimeTableView extends StatelessWidget {
                         height: row.type == TimeTableRowType.lesson
                             ? itemHeight
                             : pauseHeight,
-                        child: Column(
-                          children: [
-                            Text(row.label, style: TextStyle(fontSize: 12)),
-                            ...(row.type == TimeTableRowType.lesson
-                                ? [
-                                    Text(
-                                      row.startTime.toFlutter().format(context),
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                    Text(
-                                      row.endTime.toFlutter().format(context),
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                  ]
-                                : []),
-                          ],
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(row.label, style: TextStyle(fontSize: 12)),
+                              ...(row.type == TimeTableRowType.lesson
+                                  ? [
+                                      Text(
+                                        row.startTime.toFlutter().format(context),
+                                        style: TextStyle(fontSize: 10),
+                                      ),
+                                      Text(
+                                        row.endTime.toFlutter().format(context),
+                                        style: TextStyle(fontSize: 10),
+                                      ),
+                                    ]
+                                  : []),
+                            ],
+                          ),
                         ),
                       ),
                   ],
