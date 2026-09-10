@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'dart:io' as dio_core;
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -40,9 +40,9 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
   bool isLoggedIn = false;
 
   Future<void> addWebViewCookies(
-      final List<dio_core.Cookie> cookies,
-      List<String> urls,
-      ) async {
+    final List<dio_core.Cookie> cookies,
+    List<String> urls,
+  ) async {
     for (int i = 0; i < cookies.length; i++) {
       await cookieManager.setCookie(
         WebViewCookie(
@@ -58,6 +58,7 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
   Future<void> getCookies() async {
     final checker = ref.read(connectionCheckerProvider);
     if (!(await checker.connected)) {
+      if (!mounted) return;
       setState(() {
         isLoginError = true;
         noInternetLogin = true;
@@ -66,6 +67,7 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
       return;
     }
 
+    if (!mounted) return;
     setState(() {
       isLoginError = false;
       noInternetLogin = false;
@@ -87,6 +89,7 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
         username: account.username,
         password: account.password,
       );
+      if (!mounted) return;
 
       await addWebViewCookies(
         [
@@ -96,9 +99,11 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
         ],
         [result.location3, result.location4, result.location4],
       );
+      if (!mounted) return;
 
       final moodleHome = Uri.parse(result.moodleHomeUrl);
       await webViewController.loadRequest(moodleHome);
+      if (!mounted) return;
 
       session.jar.saveFromResponse(Uri.parse(result.location3), [
         result.moProd01Cookie,
@@ -141,7 +146,8 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
   Future<void> _handleMoodleDownload(Uri uri) async {
     double fileSize = 0;
     final storage = ref.read(storageManagerProvider);
-    final fallbackName = storage?.generateUniqueHash(uri.toString()) ??
+    final fallbackName =
+        storage?.generateUniqueHash(uri.toString()) ??
         uri.toString().hashCode.toString();
     String fileName = fallbackName;
 
@@ -208,14 +214,12 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
             currentPageTitle.value = await webViewController.getTitle() ?? "";
 
             // Hide logout buttons
-            await webViewController.runJavaScript(
-                '''
+            await webViewController.runJavaScript('''
               var dropdownLogout = document.querySelector("div#user-action-menu a.dropdown-item[href*='/login/logout.php']");
               if (dropdownLogout) dropdownLogout.style.display = "none";
               var navLogout = document.querySelector("div.navbar li a[href*='index.php?logout=']");
               if (navLogout) navLogout.style.display = "none";
-              '''
-            );
+              ''');
           },
           onWebResourceError: (WebResourceError resourceError) {
             error = resourceError.description;
@@ -237,7 +241,8 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
               }
 
               // Handle navigation to lanis
-              if (parsedUri.host.toLowerCase() == 'start.schulportal.hessen.de') {
+              if (parsedUri.host.toLowerCase() ==
+                  'start.schulportal.hessen.de') {
                 setState(() {
                   showWebView = false;
                 });
@@ -255,7 +260,7 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
 
             // Open external URLs in browser
             if (parsedUri == null || !isSchulportalDomain(parsedUri)) {
-              await launchUrl(Uri.parse(request.url));
+              await safeLaunchUrl(Uri.parse(request.url), context: context);
               return NavigationDecision.prevent;
             }
 
@@ -495,90 +500,95 @@ class _MoodleWebViewState extends ConsumerState<MoodleWebView> {
       ),
       bottomNavigationBar: isLoggedIn
           ? SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ValueListenableBuilder(
-              valueListenable: progressIndicator,
-              builder: (context, progress, _) {
-                return Visibility(
-                  visible: progress != 0,
-                  maintainSize: true,
-                  maintainState: true,
-                  maintainAnimation: true,
-                  child: LinearProgressIndicator(value: progress / 100),
-                );
-              },
-            ),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: refresh,
-                  icon: const Icon(Icons.refresh),
-                ),
-                IconButton(
-                  onPressed: () async {
-                    if (error != null) {
-                      await Clipboard.setData(
-                        ClipboardData(
-                          text: errorUrl?.toString() ?? "Unknown error",
-                        ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ValueListenableBuilder(
+                    valueListenable: progressIndicator,
+                    builder: (context, progress, _) {
+                      return Visibility(
+                        visible: progress != 0,
+                        maintainSize: true,
+                        maintainState: true,
+                        maintainAnimation: true,
+                        child: LinearProgressIndicator(value: progress / 100),
                       );
-                      return;
-                    }
-
-                    final currentUrl = await webViewController.currentUrl();
-                    if (currentUrl != null) {
-                      await Clipboard.setData(
-                        ClipboardData(text: currentUrl),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.link),
-                ),
-                Expanded(
-                  child: error == null
-                      ? Center(
-                    child: ValueListenableBuilder(
-                      valueListenable: currentPageTitle,
-                      builder: (context, title, _) => Text(
-                        title,
-                        style: Theme.of(context).textTheme.labelLarge,
-                        overflow: TextOverflow.ellipsis,
+                    },
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: refresh,
+                        icon: const Icon(Icons.refresh),
                       ),
-                    ),
-                  )
-                      : const SizedBox.shrink(),
-                ),
-                ValueListenableBuilder(
-                  valueListenable: canGoBack,
-                  builder: (context, can, _) {
-                    return IconButton(
-                      onPressed: can
-                          ? () {
-                        webViewController.goBack();
-                      }
-                          : null,
-                      icon: const Icon(Icons.arrow_back),
-                    );
-                  },
-                ),
-                ValueListenableBuilder(
-                  valueListenable: canGoForward,
-                  builder: (context, can, _) {
-                    return IconButton(
-                      onPressed: can
-                          ? () { webViewController.goForward(); }
-                          : null,
-                      icon: const Icon(Icons.arrow_forward),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      )
+                      IconButton(
+                        onPressed: () async {
+                          if (error != null) {
+                            await Clipboard.setData(
+                              ClipboardData(
+                                text: errorUrl?.toString() ?? "Unknown error",
+                              ),
+                            );
+                            return;
+                          }
+
+                          final currentUrl = await webViewController
+                              .currentUrl();
+                          if (currentUrl != null) {
+                            await Clipboard.setData(
+                              ClipboardData(text: currentUrl),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.link),
+                      ),
+                      Expanded(
+                        child: error == null
+                            ? Center(
+                                child: ValueListenableBuilder(
+                                  valueListenable: currentPageTitle,
+                                  builder: (context, title, _) => Text(
+                                    title,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelLarge,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      ValueListenableBuilder(
+                        valueListenable: canGoBack,
+                        builder: (context, can, _) {
+                          return IconButton(
+                            onPressed: can
+                                ? () {
+                                    webViewController.goBack();
+                                  }
+                                : null,
+                            icon: const Icon(Icons.arrow_back),
+                          );
+                        },
+                      ),
+                      ValueListenableBuilder(
+                        valueListenable: canGoForward,
+                        builder: (context, can, _) {
+                          return IconButton(
+                            onPressed: can
+                                ? () {
+                                    webViewController.goForward();
+                                  }
+                                : null,
+                            icon: const Icon(Icons.arrow_forward),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
           : SizedBox.shrink(),
     );
   }

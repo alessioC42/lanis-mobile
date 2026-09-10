@@ -54,9 +54,7 @@ bool _isMoodlePath(String loc) => loc == SettingsDeepLinks.moodle;
 bool _isSupportedShellPath(Ref ref, String loc) {
   final def = AppDefinitions.findMatchingLocation(loc);
   if (def != null) {
-    return ref
-        .read(supportedAppletPhpUrlsProvider)
-        .contains(def.appletPhpUrl);
+    return ref.read(supportedAppletPhpUrlsProvider).contains(def.appletPhpUrl);
   }
   if (_isSettingsPath(loc) || _isMoodlePath(loc)) return true;
   return true;
@@ -211,6 +209,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             state.uri.queryParameters['message'] ??
                 'This link is not available for your account.',
           ),
+          fallbackPath: firstSupportedHomePathFromRef(ref),
         ),
       ),
       StatefulShellRoute.indexedStack(

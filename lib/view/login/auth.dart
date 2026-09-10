@@ -9,8 +9,8 @@ import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/glitchtip.dart';
 import 'package:lanis/utils/privacy_policy.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'package:lanis/view/login/school_selector.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
   final bool showBackButton;
@@ -83,12 +83,14 @@ class LoginFormState extends ConsumerState<LoginForm> {
         config,
       );
 
-      final newID = await ref.read(accountsProvider.notifier).add(
-        schoolId: schoolId,
-        username: username,
-        password: password,
-        schoolName: selectedSchoolName,
-      );
+      final newID = await ref
+          .read(accountsProvider.notifier)
+          .add(
+            schoolId: schoolId,
+            username: username,
+            password: password,
+            schoolName: selectedSchoolName,
+          );
       final ok = await ref
           .read(authControllerProvider.notifier)
           .loginWithAccount(newID, removeAccountOnFailure: true);
@@ -100,8 +102,8 @@ class LoginFormState extends ConsumerState<LoginForm> {
       }
       if (!mounted) return;
       final auth = ref.read(authControllerProvider);
-      final cause = auth.exception?.cause ??
-          AppLocalizations.of(context).unknownError;
+      final cause =
+          auth.exception?.cause ?? AppLocalizations.of(context).unknownError;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -273,8 +275,9 @@ class LoginFormState extends ConsumerState<LoginForm> {
                                           ).colorScheme.primary,
                                         ),
                                         recognizer: TapGestureRecognizer()
-                                          ..onTap = () => launchUrl(
+                                          ..onTap = () => safeLaunchUrl(
                                             Uri.parse(privacyPolicyUrl),
+                                            context: context,
                                           ),
                                       ),
                                       TextSpan(
@@ -332,10 +335,11 @@ class LoginFormState extends ConsumerState<LoginForm> {
                             children: [
                               TextButton(
                                 onPressed: schoolIDController.text.isNotEmpty
-                                    ? () => launchUrl(
+                                    ? () => safeLaunchUrl(
                                         Uri.parse(
                                           "https://start.schulportal.hessen.de/benutzerverwaltung.php?a=userPWreminder&i=${schoolIDController.text}",
                                         ),
+                                        context: context,
                                       )
                                     : null,
                                 child: Text(

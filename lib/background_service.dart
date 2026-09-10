@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:background_fetch/background_fetch.dart' as bgf;
+import 'package:background_fetch/background_fetch.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_background_executor/flutter_background_executor.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
@@ -16,10 +14,50 @@ import 'package:lanis/l10n/account_type_ui.dart';
 import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 
+const _oneShotTaskId = 'com.transistorsoft.notftask';
+
+/// Android headless entry (app swiped away). iOS ignores this registration.
+@pragma('vm:entry-point')
+void backgroundFetchHeadlessTask(HeadlessEvent event) async {
+  await _runFetchTask(event.taskId, timeout: event.timeout);
+}
+
+Future<void> _onBackgroundFetch(String taskId) async {
+  await _runFetchTask(taskId, timeout: false);
+}
+
+Future<void> _onBackgroundFetchTimeout(String taskId) async {
+  await _runFetchTask(taskId, timeout: true);
+}
+
+Future<void> _runFetchTask(String taskId, {required bool timeout}) async {
+  debugPrint('[Lanis BG] fetch taskId=$taskId timeout=$timeout');
+  if (timeout) {
+    await BackgroundFetch.finish(taskId);
+    return;
+  }
+  try {
+    await callbackDispatcher();
+  } finally {
+    await BackgroundFetch.finish(taskId);
+    debugPrint('[Lanis BG] fetch finished taskId=$taskId');
+  }
+}
+
+Future<void> _stopBackgroundFetch() async {
+  try {
+    await BackgroundFetch.stop();
+  } catch (e, s) {
+    backgroundLogger.e(e, stackTrace: s);
+  }
+}
+
 Future<void> setupBackgroundService() async {
+  await BackgroundFetch.registerHeadlessTask(backgroundFetchHeadlessTask);
+
   if ((await Permission.notification.isDenied)) {
     logger.d('User disallowed notifications');
-    await FlutterBackgroundExecutor().cancelAllTasks();
+    await _stopBackgroundFetch();
     return;
   }
 
@@ -39,7 +77,7 @@ Future<void> setupBackgroundService() async {
       }
     }
     if (accounts.isNotEmpty && disabledCount == accounts.length) {
-      await FlutterBackgroundExecutor().cancelAllTasks();
+      await _stopBackgroundFetch();
       return;
     }
 
@@ -50,49 +88,32 @@ Future<void> setupBackgroundService() async {
       'Setting up background task with interval of $targetIntervalMinutes minutes',
     );
 
-    if (Platform.isAndroid) {
-      await FlutterBackgroundExecutor().createRefreshTask(
-        callback: callbackDispatcher,
-        settings: RefreshTaskSettings(
-          androidDetails: AndroidRefreshTaskDetails(
-            requiresBatteryNotLow: true,
-            requiresCharging: false,
-            requiresDeviceIdle: false,
-            requiresStorageNotLow: false,
-            initialDelay: Duration.zero,
-            repeatInterval: Duration(minutes: targetIntervalMinutes),
-          ),
+    try {
+      await BackgroundFetch.configure(
+        BackgroundFetchConfig(
+          minimumFetchInterval: targetIntervalMinutes,
+          stopOnTerminate: false,
+          startOnBoot: true,
+          enableHeadless: true,
+          requiresBatteryNotLow: true,
+          requiresCharging: false,
+          requiresDeviceIdle: false,
+          requiresStorageNotLow: false,
+        ),
+        _onBackgroundFetch,
+        _onBackgroundFetchTimeout,
+      );
+
+      await BackgroundFetch.scheduleTask(
+        TaskConfig(
+          taskId: _oneShotTaskId,
+          delay: 10000,
+          enableHeadless: true,
+          stopOnTerminate: false,
         ),
       );
-      await FlutterBackgroundExecutor().runImmediatelyBackgroundTask(
-        callback: callbackDispatcher,
-      );
-    }
-
-    if (Platform.isIOS) {
-      try {
-        await bgf.BackgroundFetch.configure(
-          bgf.BackgroundFetchConfig(
-            minimumFetchInterval: targetIntervalMinutes,
-          ),
-          (String taskId) async {
-            try {
-              await callbackDispatcher();
-            } finally {
-              bgf.BackgroundFetch.finish(taskId);
-            }
-          },
-          (String taskId) async {
-            bgf.BackgroundFetch.finish(taskId);
-          },
-        );
-
-        await bgf.BackgroundFetch.scheduleTask(
-          bgf.TaskConfig(taskId: 'com.transistorsoft.notftask', delay: 10000),
-        );
-      } catch (e, s) {
-        backgroundLogger.e(e, stackTrace: s);
-      }
+    } catch (e, s) {
+      backgroundLogger.e(e, stackTrace: s);
     }
   } finally {
     container.dispose();
@@ -119,7 +140,9 @@ Future<void> initializeNotifications() async {
 @pragma('vm:entry-point')
 Future<void> callbackDispatcher() async {
   try {
+    WidgetsFlutterBinding.ensureInitialized();
     backgroundLogger.i('Background fetch triggered');
+    debugPrint('[Lanis BG] callbackDispatcher started');
     await initializeNotifications();
 
     await removeLegacyV3StorageArtifacts();

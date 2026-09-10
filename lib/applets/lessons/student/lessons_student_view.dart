@@ -78,9 +78,7 @@ class _LessonsStudentViewState extends ConsumerState<LessonsStudentView>
                           icon: const Icon(Icons.school_outlined),
                           onPressed: () {
                             globalUpdateSetting!('showHomework', false);
-                            WidgetsBinding.instance.addPostFrameCallback((
-                              _,
-                            ) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
                               setState(() {});
                             });
                           },
@@ -92,9 +90,7 @@ class _LessonsStudentViewState extends ConsumerState<LessonsStudentView>
                           icon: const Icon(Icons.task_outlined),
                           onPressed: () {
                             globalUpdateSetting!('showHomework', true);
-                            WidgetsBinding.instance.addPostFrameCallback((
-                              _,
-                            ) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
                               setState(() {});
                             });
                           },
@@ -107,7 +103,8 @@ class _LessonsStudentViewState extends ConsumerState<LessonsStudentView>
         parser: ref.watch(lessonsStudentParserProvider),
         phpUrl: lessonsDefinition.appletPhpUrl,
         settingsDefaults: lessonsDefinition.settingsDefaults,
-        accountType: session.accountTypeOrNull ??
+        accountType:
+            session.accountTypeOrNull ??
             ref.read(activeAccountProvider)?.accountType ??
             AccountType.student,
         builder:
@@ -184,6 +181,7 @@ class _LessonsStudentViewState extends ConsumerState<LessonsStudentView>
                   visible:
                       attendanceLessons != null && attendanceLessons.isNotEmpty,
                   child: FloatingActionButton.extended(
+                    heroTag: null,
                     onPressed: () {
                       context.push('/${accountType.name}/lessons/attendances');
                     },

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lanis/generated/l10n.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'logger.dart';
+import 'safe_launch.dart';
 
 enum UrlModalResponse {
   /// The user opened the URL.
@@ -88,18 +88,9 @@ Future<UrlModalResponse> openUrlModal(BuildContext context, Uri uri) async {
   if (open == null || !open) {
     return UrlModalResponse.dismissed;
   }
-  try {
-    final response = await launchUrl(uri);
-
-    if (!response) {
-      logger.w('$uri konnte nicht geöffnet werden.');
-      return UrlModalResponse.rejected;
-    }
-
-    return UrlModalResponse.opened;
-  } catch (e, s) {
-    logger.w('$uri konnte nicht geöffnet werden.');
-    logger.e(e, stackTrace: s);
-    return UrlModalResponse.rejected;
-  }
+  final opened = await safeLaunchUrl(
+    uri,
+    context: context.mounted ? context : null,
+  );
+  return opened ? UrlModalResponse.opened : UrlModalResponse.rejected;
 }

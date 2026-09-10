@@ -33,6 +33,7 @@ class MonoTextViewer extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         label: Text('Export Report File'),
         icon: Icon(Icons.save_alt),
         onPressed: () {
@@ -57,7 +58,11 @@ class MonoTextViewer extends StatelessWidget {
               });
           showFileModal(
             context,
-            DownloadableFile.local(filePath: file.path, name: fileName, size: ""),
+            DownloadableFile.local(
+              filePath: file.path,
+              name: fileName,
+              size: "",
+            ),
           );
         },
       ),

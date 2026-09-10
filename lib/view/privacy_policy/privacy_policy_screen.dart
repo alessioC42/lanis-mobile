@@ -6,7 +6,7 @@ import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/home_page.dart';
 import 'package:lanis/utils/privacy_policy.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:lanis/utils/safe_launch.dart';
 
 /// Blocking screen shown until the current [privacyPolicyPublishedAt] is accepted.
 class PrivacyPolicyScreen extends ConsumerStatefulWidget {
@@ -86,7 +86,10 @@ class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton.icon(
-                  onPressed: () => launchUrl(Uri.parse(privacyPolicyUrl)),
+                  onPressed: () => safeLaunchUrl(
+                    Uri.parse(privacyPolicyUrl),
+                    context: context,
+                  ),
                   icon: const Icon(Icons.open_in_new),
                   label: Text(l10n.privacyPolicyGateOpen),
                 ),

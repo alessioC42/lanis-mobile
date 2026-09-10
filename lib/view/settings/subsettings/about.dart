@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lanis/view/settings/settings_page_builder.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/utils/privacy_policy.dart';
+import 'package:lanis/utils/safe_launch.dart';
 
 import '../../../utils/logger.dart';
 
@@ -128,34 +128,42 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
     AboutLink(
       title: (context) => AppLocalizations.of(context).githubRepository,
       iconData: Icons.code_outlined,
-      onTap: (context) =>
-          launchUrl(Uri.parse("https://github.com/alessioC42/lanis-mobile")),
+      onTap: (context) => safeLaunchUrl(
+        Uri.parse("https://github.com/alessioC42/lanis-mobile"),
+        context: context,
+      ),
     ),
     AboutLink(
       title: (context) => AppLocalizations.of(context).discordServer,
       iconData: Icons.discord,
-      onTap: (context) => launchUrl(Uri.parse("https://discord.gg/sWJXZ8FsU7")),
+      onTap: (context) => safeLaunchUrl(
+        Uri.parse("https://discord.gg/sWJXZ8FsU7"),
+        context: context,
+      ),
     ),
     AboutLink(
       title: (context) => AppLocalizations.of(context).featureRequest,
       iconData: Icons.add_comment_outlined,
-      onTap: (context) => launchUrl(
+      onTap: (context) => safeLaunchUrl(
         Uri.parse(
           "https://github.com/alessioC42/lanis-mobile/issues/new/choose",
         ),
+        context: context,
       ),
     ),
     AboutLink(
       title: (context) => AppLocalizations.of(context).latestRelease,
       iconData: Icons.update_outlined,
-      onTap: (context) => launchUrl(
+      onTap: (context) => safeLaunchUrl(
         Uri.parse("https://github.com/alessioC42/lanis-mobile/releases/latest"),
+        context: context,
       ),
     ),
     AboutLink(
       title: (context) => AppLocalizations.of(context).privacyPolicy,
       iconData: Icons.security_outlined,
-      onTap: (context) => launchUrl(Uri.parse(privacyPolicyUrl)),
+      onTap: (context) =>
+          safeLaunchUrl(Uri.parse(privacyPolicyUrl), context: context),
     ),
     AboutLink(
       title: (context) => AppLocalizations.of(context).openSourceLicenses,
@@ -234,8 +242,9 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
                                   color: foregroundColor,
                                   borderRadius: BorderRadius.circular(12.0),
                                   child: InkWell(
-                                    onTap: () => launchUrl(
+                                    onTap: () => safeLaunchUrl(
                                       Uri.parse(contributors[0]['html_url']),
+                                      context: context,
                                     ),
                                     borderRadius: BorderRadius.circular(12.0),
                                     child: Column(
@@ -295,10 +304,11 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
                                               horizontal: 16.0,
                                             ),
                                         color: foregroundColor,
-                                        onTap: () => launchUrl(
+                                        onTap: () => safeLaunchUrl(
                                           Uri.parse(
                                             contributors[1]['html_url'],
                                           ),
+                                          context: context,
                                         ),
                                       ),
                                     ),
@@ -316,10 +326,11 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
                                               horizontal: 16.0,
                                             ),
                                         color: foregroundColor,
-                                        onTap: () => launchUrl(
+                                        onTap: () => safeLaunchUrl(
                                           Uri.parse(
                                             contributors[2]['html_url'],
                                           ),
+                                          context: context,
                                         ),
                                       ),
                                     ),
@@ -341,8 +352,9 @@ class _AboutSettingsState extends ConsumerSettingsColoursState<AboutSettings> {
                               vertical: 12.0,
                             ),
                             color: foregroundColor,
-                            onTap: () => launchUrl(
+                            onTap: () => safeLaunchUrl(
                               Uri.parse(contributors[i]['html_url']),
+                              context: context,
                             ),
                           ),
                       ],

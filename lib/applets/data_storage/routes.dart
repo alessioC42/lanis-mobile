@@ -26,6 +26,7 @@ List<RouteBase> buildDataStorageRoutes(AppletRouteContext ctx) {
             if (nodeId == null) {
               return DeepLinkErrorPage(
                 error: DeepLinkException('Invalid folder id: $raw'),
+                fallbackPath: home,
               );
             }
             final title = state.uri.queryParameters['title'] ?? '';

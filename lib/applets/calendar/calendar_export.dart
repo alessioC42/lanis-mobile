@@ -7,7 +7,6 @@ import 'package:lanis/view/settings/settings.dart';
 import 'package:lanis/view/settings/settings_page_builder.dart';
 import 'package:lanis/generated/l10n.dart';
 
-
 class CalendarExport extends SettingsColours {
   final bool showBackButton;
   const CalendarExport({super.key, this.showBackButton = true});
@@ -25,7 +24,9 @@ class _CalendarExportState extends SettingsColoursState<CalendarExport> {
       showBackButton: widget.showBackButton,
       children: [
         FutureBuilder(
-          future: ProviderScope.containerOf(context).read(calendarParserProvider).getExports(),
+          future: ProviderScope.containerOf(
+            context,
+          ).read(calendarParserProvider).getExports(),
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return LinearProgressIndicator();
@@ -401,6 +402,7 @@ class _CalendarExportFileState
       title: Text(widget.title),
       backgroundColor: backgroundColor,
       floatingActionButton: FloatingActionButton(
+        heroTag: null,
         onPressed: selected != null
             ? () async {
                 showFileModal(

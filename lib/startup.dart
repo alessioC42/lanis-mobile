@@ -11,7 +11,7 @@ import 'package:lanis/features/auth/auth_controller.dart';
 import 'package:lanis/utils/privacy_policy.dart';
 import 'package:lanis/widgets/offline_available_applets_section.dart';
 import 'package:lanis/widgets/reset_account_page.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:lanis/utils/safe_launch.dart';
 
 /// Splash / auth progress / recoverable auth errors.
 class StartupScreen extends ConsumerStatefulWidget {
@@ -77,8 +77,9 @@ class _StartupScreenState extends ConsumerState<StartupScreen> {
           icon: const Icon(Icons.notifications_outlined),
           title: Text(AppLocalizations.of(context).notifications),
           content: Text(
-            AppLocalizations.of(context)
-                .systemPermissionForNotificationsExplained,
+            AppLocalizations.of(
+              context,
+            ).systemPermissionForNotificationsExplained,
           ),
           actions: [
             TextButton(
@@ -180,13 +181,11 @@ class StartupAuthErrorContent extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.wifi_find_outlined),
-                  onPressed: () => launchUrl(Uri.parse(_statusUrl)),
+                  onPressed: () =>
+                      safeLaunchUrl(Uri.parse(_statusUrl), context: context),
                   tooltip: l10n.checkStatus,
                 ),
-                Icon(
-                  isOffline ? Icons.wifi_off : Icons.error,
-                  size: 48,
-                ),
+                Icon(isOffline ? Icons.wifi_off : Icons.error, size: 48),
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: onRetry,

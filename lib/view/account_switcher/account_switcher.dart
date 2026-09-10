@@ -52,6 +52,7 @@ class _AccountSwitcherState extends ConsumerState<AccountSwitcher> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => context.push('/login'),
         label: Text(AppLocalizations.of(context).addAccount),
         icon: Icon(Icons.person_add),

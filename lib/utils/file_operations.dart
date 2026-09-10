@@ -3,18 +3,24 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lanis/generated/l10n.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'package:liblanis/liblanis.dart' show storageManagerProvider;
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:mime/mime.dart';
 
 import 'file_icons.dart';
 import 'root_nav.dart';
 
-Future<String> _downloadRemote(BuildContext context, String url, String filename) async {
-  final storage = ProviderScope.containerOf(context).read(storageManagerProvider);
+Future<String> _downloadRemote(
+  BuildContext context,
+  String url,
+  String filename,
+) async {
+  final storage = ProviderScope.containerOf(
+    context,
+  ).read(storageManagerProvider);
   if (storage == null) return '';
   return storage.downloadFile(url, filename);
 }
@@ -133,7 +139,11 @@ void showFileModal(BuildContext context, DownloadableFile file) {
   );
 }
 
-void launchFile(BuildContext context, DownloadableFile file, Function callback) {
+void launchFile(
+  BuildContext context,
+  DownloadableFile file,
+  Function callback,
+) {
   final String filename = file.name ?? AppLocalizations.of(context).unknownFile;
 
   if (file.isLocal) {
@@ -171,43 +181,49 @@ void launchFile(BuildContext context, DownloadableFile file, Function callback) 
     builder: (BuildContext context) => downloadDialog(context, file.size),
   );
 
-  _downloadRemote(context, file.url.toString(), filename).then((
-    filepath,
-  ) async {
-    if (context.mounted) popRootDialog(context);
+  _downloadRemote(context, file.url.toString(), filename)
+      .then((filepath) async {
+        if (context.mounted) popRootDialog(context);
 
-    if (filepath == "" && context.mounted) {
-      showDialog(context: context, builder: (context) => errorDialog(context));
-    } else {
-      final result = await OpenFile.open(filepath);
-      //sketchy, but "open_file" left us no other choice
-      if (result.message.contains("No APP found to open this file") &&
-          context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text("${AppLocalizations.of(context).error}!"),
-            icon: const Icon(Icons.error),
-            content: Text(AppLocalizations.of(context).noAppToOpen),
-            actions: [
-              FilledButton(
-                child: const Text('Ok'),
-                onPressed: () {
-                  popRootDialog(context);
-                },
+        if (filepath == "" && context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => errorDialog(context),
+          );
+        } else {
+          final result = await OpenFile.open(filepath);
+          //sketchy, but "open_file" left us no other choice
+          if (result.message.contains("No APP found to open this file") &&
+              context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text("${AppLocalizations.of(context).error}!"),
+                icon: const Icon(Icons.error),
+                content: Text(AppLocalizations.of(context).noAppToOpen),
+                actions: [
+                  FilledButton(
+                    child: const Text('Ok'),
+                    onPressed: () {
+                      popRootDialog(context);
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      }
-      callback();
-    }
-  }).catchError((Object _) {
-    if (context.mounted) {
-      popRootDialog(context);
-      showDialog(context: context, builder: (context) => errorDialog(context));
-    }
-  });
+            );
+          }
+          callback();
+        }
+      })
+      .catchError((Object _) {
+        if (context.mounted) {
+          popRootDialog(context);
+          showDialog(
+            context: context,
+            builder: (context) => errorDialog(context),
+          );
+        }
+      });
 }
 
 void saveFile(BuildContext context, DownloadableFile file, Function callback) {
@@ -235,27 +251,33 @@ void saveFile(BuildContext context, DownloadableFile file, Function callback) {
     builder: (BuildContext context) => downloadDialog(context, file.size),
   );
 
-  _downloadRemote(context, file.url.toString(), filename).then((
-    filepath,
-  ) async {
-    if (context.mounted) popRootDialog(context);
+  _downloadRemote(context, file.url.toString(), filename)
+      .then((filepath) async {
+        if (context.mounted) popRootDialog(context);
 
-    if (filepath == "" && context.mounted) {
-      showDialog(context: context, builder: (context) => errorDialog(context));
-    } else {
-      await platform.invokeMethod('saveFile', {
-        'fileName': filename,
-        'mimeType': lookupMimeType(filepath) ?? "*/*",
-        'filePath': filepath,
+        if (filepath == "" && context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => errorDialog(context),
+          );
+        } else {
+          await platform.invokeMethod('saveFile', {
+            'fileName': filename,
+            'mimeType': lookupMimeType(filepath) ?? "*/*",
+            'filePath': filepath,
+          });
+          callback();
+        }
+      })
+      .catchError((Object _) {
+        if (context.mounted) {
+          popRootDialog(context);
+          showDialog(
+            context: context,
+            builder: (context) => errorDialog(context),
+          );
+        }
       });
-      callback();
-    }
-  }).catchError((Object _) {
-    if (context.mounted) {
-      popRootDialog(context);
-      showDialog(context: context, builder: (context) => errorDialog(context));
-    }
-  });
 }
 
 void shareFile(BuildContext context, DownloadableFile file, Function callback) {
@@ -276,23 +298,29 @@ void shareFile(BuildContext context, DownloadableFile file, Function callback) {
     builder: (BuildContext context) => downloadDialog(context, file.size),
   );
 
-  _downloadRemote(context, file.url.toString(), filename).then((
-    filepath,
-  ) async {
-    if (context.mounted) popRootDialog(context);
+  _downloadRemote(context, file.url.toString(), filename)
+      .then((filepath) async {
+        if (context.mounted) popRootDialog(context);
 
-    if (filepath == "" && context.mounted) {
-      showDialog(context: context, builder: (context) => errorDialog(context));
-    } else {
-      await Share.shareXFiles([XFile(filepath)]);
-      callback();
-    }
-  }).catchError((Object _) {
-    if (context.mounted) {
-      popRootDialog(context);
-      showDialog(context: context, builder: (context) => errorDialog(context));
-    }
-  });
+        if (filepath == "" && context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => errorDialog(context),
+          );
+        } else {
+          await Share.shareXFiles([XFile(filepath)]);
+          callback();
+        }
+      })
+      .catchError((Object _) {
+        if (context.mounted) {
+          popRootDialog(context);
+          showDialog(
+            context: context,
+            builder: (context) => errorDialog(context),
+          );
+        }
+      });
 }
 
 AlertDialog errorDialog(BuildContext context) => AlertDialog(
@@ -302,8 +330,9 @@ AlertDialog errorDialog(BuildContext context) => AlertDialog(
   actions: [
     TextButton(
       onPressed: () {
-        launchUrl(
+        safeLaunchUrl(
           Uri.parse("https://github.com/alessioC42/lanis-mobile/issues"),
+          context: context,
         );
       },
       child: const Text("GitHub"),

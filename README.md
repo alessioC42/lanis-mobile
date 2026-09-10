@@ -1,8 +1,9 @@
 # Lanis Mobile
 
+*[Read this in English](README.en.md)*
 
 Deine App für das hessische Schulportal! In Zusammenarbeit mit dem staatlichen Schulamt für den Landkreis Groß-Gerau und den Main-Taunus-Kreis
-**Einsatz an zahlreichen Schulen in Hessen mit über 35 Tausend täglichen Nutzern.**
+**Einsatz an zahlreichen Schulen in Hessen mit über 45 Tausend täglichen Nutzern.**
 
 <p align="center">
     <img src="https://github.com/alessioC42/lanis-mobile/assets/84250128/19d30436-32f7-4cbe-b78e-f2fee3583c28" width="60%">
@@ -22,10 +23,10 @@ Deine App für das hessische Schulportal! In Zusammenarbeit mit dem staatlichen 
     </tr>
     <tr>
         <td colspan='3'>
-            <a href='https://lanis-mobile.github.io/'>website</a>
+            <a href='https://lanis-mobile.github.io/'>Website</a>
         </td>
         <td colspan='3'>
-            <a href='https://discord.gg/MGYaSetUsY'>discord</a>
+            <a href='https://discord.gg/MGYaSetUsY'>Discord</a>
         </td>
     </tr>
 </table>
@@ -53,53 +54,52 @@ Scheue dich nicht, einen Bug-Report zu erstellen, wenn du einen Fehler findest. 
 
 Bug-Reports können auch an <a href="mailto:lanis-mobile@alessioc42.dev">diese</a> E-Mail-Adresse gesendet werden, falls kein Github-Konto vorhanden ist.
 
-## Get started with development
-### 1. [Setup Flutter](https://docs.flutter.dev/get-started/quick) with your favourite IDE (Android Studio / VScode recommended)
+## Erste Schritte für die Entwicklung
+### 1. [Flutter einrichten](https://docs.flutter.dev/get-started/quick) mit deiner bevorzugten IDE (Android Studio / VScode empfohlen)
 
-### 2. Generate the code 
-*You do not need to do this, if you cloned the repository freshly, since we have this checked into source control*
+### 2. Code generieren
 ```shell
-dart run build_runner build # Database
-dart run intl_utils:generate # Localisations
+dart run build_runner build # Datenbank
+dart run intl_utils:generate # Lokalisierungen
 ```
-### 3. Development
-Note the flags here:
+### 3. Entwicklung
+Beachte hierbei folgende Flags:
 #### `--dart-define=cronetHttpNoPlay=true`
-**[Partially optional]**
-This flag is used to include the Cronet binary for networking on non-Play-Services-enabled devices (we also ship this version on the Play Store)
+**[Teilweise optional]**
+Dieses Flag wird verwendet, um die Cronet-Binärdatei für das Networking auf Geräten ohne Play Services einzubinden (diese Version stellen wir auch im Play Store bereit).
 
-If you are currently using the default Android emulator image, consider using an AOSP image instead, as these tend to perform much better than versions with Play Services enabled.
+Falls du aktuell das Standard-Android-Emulator-Image verwendest, solltest du stattdessen ein AOSP-Image nutzen, da diese in der Regel deutlich performanter sind als Versionen mit Play Services.
 
-On iOS builds this flag is not required.
+Bei iOS-Builds ist dieses Flag nicht erforderlich.
 
-#### `--dart-define=ANSI=true` 
+#### `--dart-define=ANSI=true`
 **[Optional]**
-This flag allows the application's logs to be colorized, which can help a lot if you are not already using your IDE's log-filtering tools. (Recommended to omit on macOS due to lack of support in the default Terminal)
+Dieses Flag ermöglicht farbige Logs der Anwendung, was sehr hilfreich sein kann, falls du noch nicht die Log-Filter-Tools deiner IDE nutzt. (Auf macOS wird empfohlen, dieses Flag wegzulassen, da das Standard-Terminal dies nicht unterstützt.)
 
 ```shell
 flutter run --dart-define=cronetHttpNoPlay=true --dart-define=ANSI=true
 ```
 
-### 4. Production
-For actual release mode signing is required, which can be added via placing the respective `key.properties` and `local.properties` in the `android` directory. On iOS the Development team has to be changed in Xcode. 
+### 4. Produktion
+Für den tatsächlichen Release-Modus ist eine Signierung erforderlich. Dafür müssen die entsprechenden Dateien `key.properties` und `local.properties` im `android`-Verzeichnis abgelegt werden. Bei iOS muss in Xcode das Development Team geändert werden.
 
-If you are producing a build that you intend to distribute to other people, please consider changing the app ID from `io.github.alessioc42.sph` to `io.github.alessioc42.sph.<fork|dev>.<YOUR_NAME>` or any other name that is different from the original app ID. This will prevent conflicts with the store versions that we are publishing.
+Falls du einen Build erstellst, den du an andere Personen weitergeben möchtest, ändere bitte die App-ID von `io.github.alessioc42.sph` in `io.github.alessioc42.sph.<fork|dev>.<DEIN_NAME>` oder einen anderen Namen, der sich von der Original-App-ID unterscheidet. Dies verhindert Konflikte mit den von uns veröffentlichten Store-Versionen.
 
 ```shell
 flutter build <apk|aab|ipa> --release --dart-define=cronetHttpNoPlay=true
 ```
 
-An alternative is the interactive `build.py` script, which can build Android and/or iOS in one run, copy artifacts into `artifacts/`, and optionally upload to App Store Connect / Google Play:
+Alternativ gibt es das interaktive Skript `build.py`, das Android und/oder iOS in einem Durchlauf bauen, die Artefakte nach `artifacts/` kopieren und optional zu App Store Connect / Google Play hochladen kann:
 
 ```shell
 python3 build.py
-# or non-interactive:
+# oder nicht-interaktiv:
 python3 build.py --android --ios --skip-upgrade --yes
 ```
 
-#### Store uploads (optional)
+#### Store-Uploads (optional)
 
-`build.py` loads secrets from gitignored `.env` / `.build.env` in the repo root (real environment variables win). Example:
+`build.py` lädt Zugangsdaten aus den (per `.gitignore` ausgeschlossenen) Dateien `.env` / `.build.env` im Repository-Root (echte Umgebungsvariablen haben Vorrang). Beispiel:
 
 ```env
 ASC_API_KEY_ID=XXXXXXXXXX
@@ -108,19 +108,19 @@ ASC_API_KEY_PATH=/path/to/AuthKey_XXXXXXXXXX.p8
 PLAY_SERVICE_ACCOUNT_JSON=/path/to/service-account.json
 ```
 
-Extra file: `python3 build.py --env-file /path/to/secrets.env`.
+Zusätzliche Datei: `python3 build.py --env-file /path/to/secrets.env`.
 
-For Play uploads, install the optional Python deps and use a Google Cloud service account that has been invited in Play Console (Users and permissions) with permission to manage tracks:
+Für Play-Uploads installiere die optionalen Python-Abhängigkeiten und verwende ein Google-Cloud-Service-Konto, das in der Play Console (Nutzer und Berechtigungen) mit der Berechtigung zur Verwaltung von Tracks eingeladen wurde:
 
 ```shell
 pip install -r requirements-build.txt
 python3 build.py --android --upload-android --play-track internal --yes
 ```
 
-For App Store Connect uploads (macOS + Xcode), create an App Store Connect API key, put the values in `.env` (or export them), then:
+Für App-Store-Connect-Uploads (macOS + Xcode) erstelle einen App Store Connect API-Key, trage die Werte in `.env` ein (oder exportiere sie) und führe dann aus:
 
 ```shell
 python3 build.py --ios --upload-ios --yes
 ```
 
-Uploads deliver the binary only (TestFlight / Play track). They do not submit for App Review or promote a production rollout.
+Uploads liefern lediglich die Binärdatei aus (TestFlight / Play-Track). Sie reichen den Build nicht zur App-Review ein und geben kein Produktions-Rollout frei.

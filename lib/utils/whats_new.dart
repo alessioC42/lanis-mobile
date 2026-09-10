@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/root_nav.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lanis/generated/l10n.dart';
 
@@ -171,7 +171,10 @@ class ReleaseNotesScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.open_in_browser),
             onPressed: () {
-              launchUrl(Uri.parse(releaseInfo['html_url']));
+              safeLaunchUrl(
+                Uri.parse(releaseInfo['html_url']),
+                context: context,
+              );
             },
           ),
         ],
@@ -184,7 +187,8 @@ class ReleaseNotesScreen extends StatelessWidget {
               data: releaseInfo['body'] ?? AppLocalizations.of(context).error,
               padding: const EdgeInsets.all(16),
               onTapLink: (text, href, title) {
-                launchUrl(Uri.parse(href!));
+                if (href == null) return;
+                safeLaunchUrl(Uri.parse(href), context: context);
               },
             ),
           ),
@@ -213,8 +217,9 @@ class ReleaseNotesScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: GestureDetector(
                           onTap: () {
-                            launchUrl(
+                            safeLaunchUrl(
                               Uri.parse('https://github.com/$contributor'),
+                              context: context,
                             );
                           },
                           child: ClipOval(
@@ -243,6 +248,7 @@ class ReleaseNotesScreen extends StatelessWidget {
       ),
       floatingActionButton: showBack
           ? FloatingActionButton.extended(
+              heroTag: null,
               onPressed: () => popRootDialog(context),
               icon: const Icon(Icons.done),
               label: Text(AppLocalizations.of(context).done),
@@ -287,7 +293,7 @@ class NewUpdateAvailableDialog extends StatelessWidget {
         FilledButton(
           onPressed: () {
             Navigator.of(context).pop();
-            launchStore();
+            launchStore(context: context);
           },
           child: Text(AppLocalizations.of(context).install),
         ),
@@ -296,23 +302,24 @@ class NewUpdateAvailableDialog extends StatelessWidget {
   }
 }
 
-void launchStore() {
-  try {
-    if (Platform.isAndroid || Platform.isIOS) {
-      final url = Uri.parse(
-        Platform.isAndroid
-            ? "market://details?id=io.github.alessioc42.sph"
-            : "https://apps.apple.com/app/id6511247743",
-      );
-      launchUrl(url, mode: LaunchMode.externalApplication);
-    }
-  } on PlatformException {
-    launchUrl(
-      Uri.parse(
-        Platform.isAndroid
-            ? "https://play.google.com/store/apps/details?id=io.github.alessioc42.sph"
-            : "https://apps.apple.com/app/id6511247743",
-      ),
-    );
-  }
+Future<void> launchStore({BuildContext? context}) async {
+  if (!(Platform.isAndroid || Platform.isIOS)) return;
+  final storeUri = Uri.parse(
+    Platform.isAndroid
+        ? "market://details?id=io.github.alessioc42.sph"
+        : "https://apps.apple.com/app/id6511247743",
+  );
+  final opened = await safeLaunchUrl(
+    storeUri,
+    context: context,
+    mode: LaunchMode.externalApplication,
+  );
+  if (opened) return;
+  await safeLaunchUrl(
+    Uri.parse(
+      Platform.isAndroid
+          ? "https://play.google.com/store/apps/details?id=io.github.alessioc42.sph"
+          : "https://apps.apple.com/app/id6511247743",
+    ),
+  );
 }

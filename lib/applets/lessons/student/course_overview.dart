@@ -22,7 +22,8 @@ class CourseOverviewAnsicht extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CourseOverviewAnsicht> createState() => _CourseOverviewAnsichtState();
+  ConsumerState<CourseOverviewAnsicht> createState() =>
+      _CourseOverviewAnsichtState();
 }
 
 class _CourseOverviewAnsichtState extends ConsumerState<CourseOverviewAnsicht> {
@@ -54,9 +55,11 @@ class _CourseOverviewAnsichtState extends ConsumerState<CourseOverviewAnsicht> {
   }
 
   void _openSemester1() {
+    final courseId = data?.courseID;
+    if (courseId == null) return;
     final title = Uri.encodeComponent(widget.title);
     context.push(
-      '/$_accountPrefix/lessons/course/${data!.courseID}?title=$title&semester=1',
+      '/$_accountPrefix/lessons/course/$courseId?title=$title&semester=1',
     );
   }
 
@@ -69,10 +72,9 @@ class _CourseOverviewAnsichtState extends ConsumerState<CourseOverviewAnsicht> {
       }
 
       String url = widget.dataFetchURL;
-      data = await ref.read(lessonsStudentParserProvider).getDetailedCourseView(
-        url,
-        force: force,
-      );
+      data = await ref
+          .read(lessonsStudentParserProvider)
+          .getDetailedCourseView(url, force: force);
 
       if (!mounted) return;
       setState(() {
@@ -158,11 +160,8 @@ class _CourseOverviewAnsichtState extends ConsumerState<CourseOverviewAnsicht> {
                         },
                         child: ActionChip(
                           label: Text(file.name ?? "..."),
-                          onPressed: () => fo.launchFile(
-                            context,
-                            foFile,
-                            () {},
-                          ),
+                          onPressed: () =>
+                              fo.launchFile(context, foFile, () {}),
                         ),
                       ),
                     );
@@ -567,7 +566,7 @@ class _CourseOverviewAnsichtState extends ConsumerState<CourseOverviewAnsicht> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          if (data!.semester1URL != null)
+          if (data?.semester1URL != null)
             IconButton(
               icon: const Icon(Icons.looks_one_outlined),
               onPressed: _openSemester1,

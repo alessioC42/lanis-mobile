@@ -14,21 +14,14 @@ import 'package:liblanis/liblanis.dart';
 
 List<RouteBase> buildLessonsRoutes(AppletRouteContext ctx) {
   return [
-    for (final type in [
-      AccountType.student,
-      AccountType.parent,
-      AccountType.teacher,
-    ])
-      ..._lessonsRoutesFor(type, ctx),
+    ..._lessonsRoutesFor(AccountType.student, ctx),
+    ..._lessonsRoutesFor(AccountType.teacher, ctx),
   ];
 }
 
 List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
   final base = '/${type.name}/lessons';
   final home = '$base/home';
-  final studentLike =
-      type == AccountType.student || type == AccountType.parent;
-
   return [
     GoRoute(
       path: base,
@@ -40,7 +33,7 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
         appletHomeShell(
           homeBuilder: (context, state) => ctx.homeBody(lessonsDefinition),
         ),
-        if (studentLike) ...[
+        if (type == AccountType.student)
           GoRoute(
             path: 'course/:courseId',
             builder: (context, state) {
@@ -61,6 +54,7 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
               );
             },
           ),
+        if (type == AccountType.student)
           GoRoute(
             path: 'attendances',
             builder: (context, state) => DeepLinkPopScope(
@@ -68,6 +62,7 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
               child: const LessonsAttendancesRoutePage(),
             ),
           ),
+        if (type == AccountType.student)
           GoRoute(
             path: 'upload',
             builder: (context, state) {
@@ -77,6 +72,7 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
               if (url == null || url.isEmpty) {
                 return DeepLinkErrorPage(
                   error: DeepLinkException('Missing upload url parameter'),
+                  fallbackPath: home,
                 );
               }
               return DeepLinkPopScope(
@@ -89,7 +85,6 @@ List<RouteBase> _lessonsRoutesFor(AccountType type, AppletRouteContext ctx) {
               );
             },
           ),
-        ],
         if (type == AccountType.teacher)
           GoRoute(
             path: 'course/:courseId',

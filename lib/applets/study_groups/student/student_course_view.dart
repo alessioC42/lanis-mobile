@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:intl/intl.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class StudentCourseView extends StatelessWidget {
@@ -147,7 +148,11 @@ class _TeacherChipState extends State<TeacherChip> {
           scheme: 'mailto',
           path: widget.teacher.email,
         );
-        launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication);
+        safeLaunchUrl(
+          emailLaunchUri,
+          context: context,
+          mode: LaunchMode.externalApplication,
+        );
       },
       behavior: HitTestBehavior.deferToChild,
       child: Chip(

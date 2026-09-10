@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lanis/bridge/flutter_secret_store.dart';
 import 'package:lanis/utils/logger.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -154,5 +154,5 @@ void sendEmail(FlutterErrorDetails errorDetails) async {
     },
   );
 
-  await launchUrl(emailUri);
+  await safeLaunchUrl(emailUri);
 }

@@ -3,9 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:liblanis/liblanis.dart';
 import 'package:linkify/linkify.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../utils/logger.dart';
+import '../../utils/safe_launch.dart';
 
 bool doesCalendarEntryExist(dynamic entry) => entry != null && entry != "";
 
@@ -193,14 +192,11 @@ class CalendarEventBottomSheet extends StatelessWidget {
                                   color: Theme.of(context).colorScheme.primary,
                                 ),
                             recognizer: TapGestureRecognizer()
-                              ..onTap = () async {
-                                try {
-                                  await launchUrl(Uri.parse(element.url));
-                                } catch (e) {
-                                  logger.e(
-                                    "Could not launch url: ${element.url}",
-                                  );
-                                }
+                              ..onTap = () {
+                                safeLaunchUrl(
+                                  Uri.parse(element.url),
+                                  context: context,
+                                );
                               },
                           );
                         }

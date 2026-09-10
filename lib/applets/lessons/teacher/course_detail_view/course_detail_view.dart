@@ -120,6 +120,7 @@ class _TeacherCourseDetailViewState
       floatingActionButton: _loading || _error || details == null
           ? null
           : FloatingActionButton.extended(
+              heroTag: null,
               label: Text(AppLocalizations.of(context).newEntry),
               icon: Icon(Icons.add),
               onPressed: () async {
@@ -134,7 +135,9 @@ class _TeacherCourseDetailViewState
                   if (result == true) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(AppLocalizations.of(context).entryCreated),
+                        content: Text(
+                          AppLocalizations.of(context).entryCreated,
+                        ),
                       ),
                     );
                     await loadData();

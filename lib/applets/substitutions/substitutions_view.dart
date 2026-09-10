@@ -248,7 +248,8 @@ class _SubstitutionsViewState extends ConsumerState<SubstitutionsView>
     }
     final parser = ref.watch(substitutionsParserProvider);
     return CombinedAppletBuilder<SubstitutionPlan>(
-      accountType: session.accountTypeOrNull ??
+      accountType:
+          session.accountTypeOrNull ??
           ref.read(activeAccountProvider)?.accountType ??
           AccountType.student,
       parser: parser,
@@ -277,6 +278,7 @@ class _SubstitutionsViewState extends ConsumerState<SubstitutionsView>
                   : null,
             ),
             floatingActionButton: FloatingActionButton(
+              heroTag: null,
               onPressed: () async {
                 await context.push('/common/substitutions/filter');
               },
@@ -349,7 +351,9 @@ class _SubstitutionsViewState extends ConsumerState<SubstitutionsView>
               _selectedDate = data.days[_tabController!.index].parsedDate;
             });
             if (old != null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => old.dispose(),
+              );
             }
           } else if (_tabController!.index != currentIndex &&
               currentIndex < data.days.length) {
@@ -367,6 +371,7 @@ class _SubstitutionsViewState extends ConsumerState<SubstitutionsView>
                   : null,
             ),
             floatingActionButton: FloatingActionButton(
+              heroTag: null,
               onPressed: () async {
                 await context.push('/common/substitutions/filter');
               },

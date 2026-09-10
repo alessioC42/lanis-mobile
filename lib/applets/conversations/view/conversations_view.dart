@@ -808,6 +808,7 @@ class _ConversationsViewState extends ConsumerState<ConversationsView> {
           floatingActionButton: toggleMode
               ? disableToggleButton
                     ? FloatingActionButton(
+                        heroTag: null,
                         onPressed: null,
                         child: SizedBox(
                           width: 24,
@@ -816,6 +817,7 @@ class _ConversationsViewState extends ConsumerState<ConversationsView> {
                         ),
                       )
                     : FloatingActionButton.extended(
+                        heroTag: null,
                         icon: Icon(Icons.visibility),
                         label: Text(AppLocalizations.of(context).hideShow),
                         onPressed: () async {
@@ -931,6 +933,7 @@ class _ConversationsViewState extends ConsumerState<ConversationsView> {
                         },
                       )
               : FloatingActionButton(
+                  heroTag: null,
                   onPressed: openCreateConversation,
                   child: loadingCreateButton
                       ? SizedBox(

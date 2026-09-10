@@ -53,9 +53,7 @@ RouteBase appletHomeShell({
       if (Responsive.isTablet(context)) return child;
       return _PhoneAppletBottomNav(child: child);
     },
-    routes: [
-      GoRoute(path: homePath, builder: homeBuilder),
-    ],
+    routes: [GoRoute(path: homePath, builder: homeBuilder)],
   );
 }
 
@@ -68,11 +66,16 @@ class _PhoneAppletBottomNav extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final chrome = HomeChrome.of(context);
     final supported = ref.watch(supportedAppletPhpUrlsProvider);
+    final accountType = ref.watch(
+      activeAccountProvider.select((account) => account?.accountType),
+    );
     final nested = AppDefinitions.homeApplets;
     final indexes = <int>[];
     final defs = <AppletDefinition>[];
     for (var i = 0; i < nested.length; i++) {
-      if (supported.contains(nested[i].appletPhpUrl)) {
+      if (accountType != null &&
+          nested[i].supportedAccountTypes.contains(accountType) &&
+          supported.contains(nested[i].appletPhpUrl)) {
         indexes.add(i);
         defs.add(nested[i]);
       }

@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:lanis/utils/file_operations.dart';
+import 'package:lanis/utils/logger.dart';
 import 'package:lanis/utils/root_nav.dart';
 
 import '../generated/l10n.dart';
@@ -168,7 +170,13 @@ Future<List<PickedFile>> pickFileUsingDocumentsUI(
 
 Future<PickedFile?> pickFileUsingCamera(BuildContext context) async {
   final ImagePicker imagePicker = ImagePicker();
-  final image = await imagePicker.pickImage(source: ImageSource.camera);
+  final XFile? image;
+  try {
+    image = await imagePicker.pickImage(source: ImageSource.camera);
+  } on PlatformException catch (e) {
+    logger.w('Camera pick failed: ${e.code}');
+    return null;
+  }
   String? path = image?.path;
 
   if (path == null) {
@@ -201,7 +209,13 @@ Future<List<PickedFile>> pickFilesUsingGallery(BuildContext context) async {
   List<PickedFile> result = [];
   if (Platform.isIOS) {
     final ImagePicker picker = ImagePicker();
-    final List<XFile> images = await picker.pickMultiImage();
+    final List<XFile> images;
+    try {
+      images = await picker.pickMultiImage();
+    } on PlatformException catch (e) {
+      logger.w('Gallery pick failed: ${e.code}');
+      return result;
+    }
 
     if (context.mounted) {
       final name = await askFileName(context);

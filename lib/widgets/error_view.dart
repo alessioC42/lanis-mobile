@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lanis/generated/l10n.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:lanis/utils/safe_launch.dart';
 
 import 'package:liblanis/liblanis.dart';
 
@@ -62,8 +62,9 @@ class AppletErrorView extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: () {
-                  launchUrl(
-                    Uri.parse("https://github.com/alessioC42/lanis/issues"),
+                  safeLaunchUrl(
+                    Uri.parse("https://github.com/lanis-mobile/lanis/issues"),
+                    context: context,
                   );
                 },
                 child: const Text("GitHub"),

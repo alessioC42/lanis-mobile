@@ -80,15 +80,35 @@ bool deepLinkPrefixAllowed(String location, AccountType accountType) {
 /// Full-screen error for bad deep links.
 class DeepLinkErrorPage extends StatelessWidget {
   final Exception error;
+  final String? fallbackPath;
 
-  const DeepLinkErrorPage({super.key, required this.error});
+  const DeepLinkErrorPage({super.key, required this.error, this.fallbackPath});
+
+  void _goBack(BuildContext context) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else if (fallbackPath != null) {
+      context.go(fallbackPath!);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: AppletErrorView(error: error, showAppBar: false),
+    final page = Scaffold(
+      appBar: AppBar(
+        leading: fallbackPath == null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: () => _goBack(context),
+              ),
+      ),
+      body: AppletErrorView(error: error),
     );
+    if (fallbackPath == null) return page;
+    return DeepLinkPopScope(fallbackPath: fallbackPath!, child: page);
   }
 }
 

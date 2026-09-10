@@ -15,7 +15,7 @@ import 'package:lanis/l10n/account_type_ui.dart';
 import 'package:lanis/widgets/combined_applet_builder.dart';
 
 final double itemHeight = 46;
-double headerHeight = 40;
+final double headerHeight = 40;
 final double hourWidth = 70;
 final double pauseHeight = 18;
 
@@ -127,11 +127,6 @@ class _StudentTimetableBetterViewState
               settings,
               weekSelection.badge,
             );
-
-            headerHeight =
-                timetable.weekBadge != null && timetable.weekBadge!.isNotEmpty
-                ? 40
-                : 26;
 
             final appBar = AppBar(
               title: Text(timeTableDefinition.label(context)),
@@ -338,17 +333,15 @@ class TimeTableView extends StatelessWidget {
                 Column(
                   spacing: 8.0,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: SizedBox(
-                        height: headerHeight + 10,
-                        width: hourWidth,
+                    SizedBox(
+                      height: headerHeight,
                         child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text("KW ${getCurrentWeekNumber()}"),
-                            timetable.weekBadge != null &&
-                                    timetable.weekBadge!.isNotEmpty
-                                ? Text(
+                          if (timetable.weekBadge != null &&
+                              timetable.weekBadge!.isNotEmpty)
+                            Text(
                                     AppLocalizations.of(
                                       context,
                                     ).timetableWeek(timetable.weekBadge!),
@@ -356,10 +349,8 @@ class TimeTableView extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       fontSize: 10,
                                     ),
-                                  )
-                                : SizedBox(),
+                            ),
                           ],
-                        ),
                       ),
                     ),
                     for (var (row) in data.hours)
@@ -378,22 +369,26 @@ class TimeTableView extends StatelessWidget {
                         height: row.type == TimeTableRowType.lesson
                             ? itemHeight
                             : pauseHeight,
-                        child: Column(
-                          children: [
-                            Text(row.label, style: TextStyle(fontSize: 12)),
-                            ...(row.type == TimeTableRowType.lesson
-                                ? [
-                                    Text(
-                                      row.startTime.toFlutter().format(context),
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                    Text(
-                                      row.endTime.toFlutter().format(context),
-                                      style: TextStyle(fontSize: 10),
-                                    ),
-                                  ]
-                                : []),
-                          ],
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(row.label, style: TextStyle(fontSize: 12)),
+                              ...(row.type == TimeTableRowType.lesson
+                                  ? [
+                                      Text(
+                                        row.startTime.toFlutter().format(context),
+                                        style: TextStyle(fontSize: 10),
+                                      ),
+                                      Text(
+                                        row.endTime.toFlutter().format(context),
+                                        style: TextStyle(fontSize: 10),
+                                      ),
+                                    ]
+                                  : []),
+                            ],
+                          ),
                         ),
                       ),
                   ],
@@ -479,7 +474,7 @@ class TimeTableView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              height: 40,
+              height: headerHeight,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8.0),

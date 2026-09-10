@@ -66,6 +66,7 @@ class _NewConversationConfiguratorState
         title: Text(AppLocalizations.of(context).createNewConversation),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: isFormValid ? _createChat : null,
         icon: const Icon(Icons.create),
         label: Text(AppLocalizations.of(context).create),
@@ -218,7 +219,8 @@ class _NewConversationConfiguratorState
               ],
             ),
           ),
-          if (ref.read(conversationsParserProvider).cachedCanChooseType ?? false) ...[
+          if (ref.read(conversationsParserProvider).cachedCanChooseType ??
+              false) ...[
             const Divider(),
             Card(
               child: Padding(

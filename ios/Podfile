@@ -29,6 +29,7 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   # background_fetch ships a static TSBackgroundFetch.xcframework via CocoaPods.
+  # Static Sentry then needs libc++ on Runner (OTHER_LDFLAGS -lc++ in the Xcode project).
   use_frameworks! :linkage => :static
   use_modular_headers!
 

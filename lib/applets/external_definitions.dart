@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lanis/applets/definitions.dart';
 import 'package:lanis/generated/l10n.dart';
 import 'package:lanis/utils/deep_link.dart';
+import 'package:lanis/utils/safe_launch.dart';
 import 'package:liblanis/liblanis.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 final openLanisDefinition = ExternalDefinition(
   id: 'openLanis',
@@ -18,11 +18,14 @@ final openLanisDefinition = ExternalDefinition(
     final account = container.read(activeAccountProvider);
     if (account == null) return;
     final config = container.read(lanisConfigProvider);
-    LanisSession.getLoginURL(account, config).then((response) {
-      launchUrl(Uri.parse(response));
-    }).catchError((Object error, StackTrace stackTrace) {
-      debugPrint('Failed to open Lanis login URL: $error');
-    });
+    LanisSession.getLoginURL(account, config)
+        .then((response) {
+          if (!context.mounted) return;
+          safeLaunchUrl(Uri.parse(response), context: context);
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          debugPrint('Failed to open Lanis login URL: $error');
+        });
   },
 );
 
